@@ -131,6 +131,7 @@ test('each provider keeps its own key, model and URL while switching, and all ar
       openai: { apiKey: 'sk-open', model: '', baseUrl: '' },
     },
     keys: DEFAULT_KEYS,
+    companion: 'pup',
   });
 });
 
@@ -150,6 +151,7 @@ test('saves trimmed values, and a blank model or URL means the default', async (
     targetLang: 'de',
     providers: { deepseek: { apiKey: 'sk-test', model: '', baseUrl: '' } },
     keys: DEFAULT_KEYS,
+    companion: 'pup',
   });
 });
 
@@ -348,4 +350,48 @@ test('a provider picked while the saved settings are still loading is not overwr
   await expect(page.locator('#baseUrl')).toHaveValue('http://localhost:11434/v1');
   await page.waitForTimeout(1000);
   await expect(page.locator('#provider')).toHaveValue('ollama');
+});
+
+test('the settings come in blocks, each with its title', async ({ page, extensionId }) => {
+  await page.goto(optionsUrl(extensionId));
+  await expect(page.locator('.card > h2')).toHaveText(['Translation', 'Keys', 'Companion', 'Sites']);
+  await expect(page.locator('.card').filter({ hasText: 'API key' })).toHaveCount(1); // the provider's fields are in its block
+});
+
+test('the companions move in their block, Spot chosen; a hovered one dances, and the one picked is saved', async ({ page, extensionId, serviceWorker }) => {
+  await page.goto(optionsUrl(extensionId));
+  const tiles = page.locator('.companion');
+  await expect(tiles).toHaveText([/Spot/, /Ink/, /Biscuit/, /No one/]);
+  await expect(page.getByRole('radio', { name: 'Spot' })).toBeChecked();
+  const ink = tiles.filter({ hasText: 'Ink' }).locator('.companion-picture');
+  await expect(ink).toHaveAttribute('data-hero', 'Ink');
+  await expect(ink).toHaveAttribute('data-mood', 'idle');
+  await tiles.filter({ hasText: 'Ink' }).hover();
+  await expect(ink).toHaveAttribute('data-mood', 'dance');
+  await page.mouse.move(1, 1);
+  await expect(ink).toHaveAttribute('data-mood', 'idle');
+
+  await tiles.filter({ hasText: 'Ink' }).click();
+  await expect(page.getByRole('radio', { name: 'Ink' })).toBeChecked();
+  await save(page);
+  await expect(page.locator('#status')).toContainText('Saved');
+  expect((await stored(serviceWorker)).companion).toBe('cat');
+  await page.reload();
+  await expect(page.getByRole('radio', { name: 'Ink' })).toBeChecked();
+
+  await page.getByRole('radio', { name: 'Ink' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('radio', { name: 'No one' })).toBeChecked();
+  await save(page);
+  await expect.poll(async () => (await stored(serviceWorker)).companion).toBe('none');
+});
+
+test('Save stays in reach while the page scrolls', async ({ page, extensionId }) => {
+  await page.setViewportSize({ width: 800, height: 480 });
+  await page.goto(optionsUrl(extensionId));
+  const saveButton = page.getByRole('button', { name: 'Save' });
+  await expect(saveButton).toBeInViewport();
+  await page.locator('.companion').first().scrollIntoViewIfNeeded();
+  await expect(saveButton).toBeInViewport();
 });

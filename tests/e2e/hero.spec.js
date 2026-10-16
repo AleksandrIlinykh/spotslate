@@ -1,4 +1,4 @@
-import { test, expect, altHover, popupBox, popupText } from './fixtures.js';
+import { test, expect, altHover, popupBox, popupText, inContentScript } from './fixtures.js';
 
 const hero = (page) => page.locator('#spotslate-hero');
 
@@ -110,4 +110,57 @@ test('with reduced motion the pup stands still', async ({ page, server }) => {
   expect(await strip.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   expect(await strip.evaluate((element) => getComputedStyle(element).animationName)).not.toBe('none');
+});
+
+test('the companion chosen in the settings comes instead of the pup: the cat kneads, the corgi wiggles its rear', async ({ page, server, setSettings }) => {
+  await setSettings({ companion: 'cat' });
+  await page.goto(`${server.url}/page.html`);
+  await page.mouse.move(60, 150);
+  await page.keyboard.down('Alt');
+  await expect(hero(page)).toHaveAttribute('data-hero', 'Ink');
+  await expect(hero(page)).toHaveAttribute('data-play', 'dance');
+  await expect.poll(() => heroBox(page)).toEqual({ x: 72, y: 166, width: 32, height: 32 });
+  await page.keyboard.up('Alt');
+  await setSettings({ companion: 'corgi' }); // an open page gets it at once
+  await page.keyboard.down('Alt');
+  await expect(hero(page)).toHaveAttribute('data-hero', 'Biscuit');
+  await expect(hero(page)).toHaveAttribute('data-play', 'dance');
+});
+
+test('with no companion, nothing comes to the mouse or onto the popup', async ({ page, server, setSettings }) => {
+  await setSettings({ companion: 'none' });
+  await page.goto(`${server.url}/page.html`);
+  await altHover(page, '#p1');
+  await expect(popupText(page)).toContainText('[RU]');
+  await page.keyboard.up('Alt');
+  await page.waitForTimeout(400);
+  await expect(hero(page)).toHaveCount(0);
+});
+
+test('now and then, resting on the popup, the cat licks itself, then rests again', async ({ page, server, setSettings }) => {
+  test.slow(); // the cat takes its time
+  await setSettings({ companion: 'cat' });
+  await page.goto(`${server.url}/page.html`);
+  await inContentScript(page, 'Math.random = () => 0'); // the shortest pause, and the first of its fidgets
+  await altHover(page, '#p1');
+  await expect(popupText(page)).toContainText('[RU]');
+  await page.keyboard.up('Alt');
+  await expect(hero(page)).toHaveAttribute('data-play', 'idle');
+  await expect(hero(page)).toHaveAttribute('data-play', 'lick', { timeout: 15_000 });
+  await expect(hero(page)).toHaveAttribute('data-mood', 'idle');
+  await expect(hero(page)).toHaveAttribute('data-play', 'idle', { timeout: 15_000 });
+});
+
+test('with reduced motion the cat keeps still, without its fidgets', async ({ page, server, setSettings }) => {
+  test.slow();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setSettings({ companion: 'cat' });
+  await page.goto(`${server.url}/page.html`);
+  await inContentScript(page, 'Math.random = () => 0');
+  await altHover(page, '#p1');
+  await expect(popupText(page)).toContainText('[RU]');
+  await page.keyboard.up('Alt');
+  await expect(hero(page)).toHaveAttribute('data-play', 'idle');
+  await page.waitForTimeout(6500); // past the shortest pause
+  await expect(hero(page)).toHaveAttribute('data-play', 'idle');
 });

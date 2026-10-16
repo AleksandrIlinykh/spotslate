@@ -3,7 +3,11 @@ import { checkedKeys, currentPlatform } from './keys.js';
 
 export const DEFAULTS = Object.freeze({
   provider: 'chrome',
+  companion: 'pup',
 });
+
+// The companions to choose from (content/pup.js, cat.js, corgi.js); 'none' in the settings means no companion.
+export const COMPANIONS = Object.freeze(['pup', 'cat', 'corgi']);
 
 export const LANGUAGES = Object.freeze({
   ru: 'Russian',
@@ -47,7 +51,7 @@ export function defaultTargetLang(uiLanguage = browserLanguage()) {
 }
 
 // Stored settings with every value checked: { provider, targetLang, providers: { [id]: { apiKey, model, baseUrl } },
-// keys: { read, write } } (see keys.js; keys refused on `platform` become the defaults).
+// keys: { read, write }, companion } (see keys.js; keys refused on `platform` become the defaults).
 // Settings saved before providers existed kept apiKey, model and baseUrl at the top: they become the DeepSeek entry,
 // and DeepSeek stays in use.
 export function withDefaults(stored, platform = currentPlatform(), uiLanguage = browserLanguage()) {
@@ -64,6 +68,7 @@ export function withDefaults(stored, platform = currentPlatform(), uiLanguage = 
     targetLang: Object.hasOwn(LANGUAGES, targetLang) ? targetLang : defaultTargetLang(uiLanguage),
     providers,
     keys: checkedKeys(stored?.keys, platform),
+    companion: COMPANIONS.includes(stored?.companion) || stored?.companion === 'none' ? stored.companion : DEFAULTS.companion,
   };
 }
 

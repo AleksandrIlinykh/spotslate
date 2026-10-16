@@ -54,6 +54,7 @@ function show(settings) {
   element('intro').textContent = `Hold ${readKeyName(settings.keys.read, platform)} and hover over a paragraph to see its translation above it.`;
   showKeys(settings.keys);
   form.elements.targetLang.value = settings.targetLang;
+  form.elements.companion.value = settings.companion;
   for (const [id, preset] of Object.entries(PROVIDERS)) {
     const entry = settings.providers[id];
     drafts[id] = { apiKey: entry?.apiKey ?? '', model: entry?.model || preset.model, baseUrl: entry?.baseUrl || preset.baseUrl };
@@ -398,12 +399,28 @@ form.addEventListener('submit', async (event) => {
     targetLang: form.elements.targetLang.value,
     providers: entriesToStore(),
     keys: { read: form.elements.readKey.value, write: writeShortcut },
+    companion: form.elements.companion.value,
   });
   await chrome.storage.local.set({ settings });
   show(settings);
   report((await allowed) ? 'Saved' : `Saved, but ${notAllowed(provider)}, so requests to it will fail.`);
   if (provider.api === 'browser') await prepareBrowserModel(settings.targetLang);
 });
+
+// Each companion moves in its tile as it does on pages: resting, with its fidgets now and then, and dancing while the
+// mouse or the focus is on the tile.
+for (const tile of document.querySelectorAll('.companion')) {
+  const hero = globalThis.spotslate.heroes[tile.querySelector('input').value];
+  if (!hero) continue;
+  const drawn = globalThis.spotslate.drawHero(hero, tile.querySelector('.companion-picture'), { scale: 3 });
+  drawn.setMood('idle');
+  const dance = () => drawn.setMood('dance');
+  const rest = () => drawn.setMood(tile.matches(':hover') || tile.contains(document.activeElement) ? 'dance' : 'idle');
+  tile.addEventListener('pointerenter', dance);
+  tile.addEventListener('focusin', dance);
+  tile.addEventListener('pointerleave', () => setTimeout(rest));
+  tile.addEventListener('focusout', () => setTimeout(rest));
+}
 
 // The sites with a mode of their own, each with a button that brings it back to the default.
 async function showSites() {

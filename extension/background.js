@@ -59,7 +59,8 @@ chrome.declarativeNetRequest
   })
   .catch(() => {});
 
-// Pages get the public part of the settings: the target language, which engine translates and its name, and the keys.
+// Pages get the public part of the settings: the target language, which engine translates and its name, the keys and
+// the companion.
 // With the free engine (Chrome's translator) the page translates by itself.
 function pageSettings(settings) {
   const { read, write } = settings.keys;
@@ -69,6 +70,7 @@ function pageSettings(settings) {
     providerName: activeProvider(settings).name,
     keys: { read, readName: readKeyName(read, currentPlatform()), write },
     languages: Object.keys(LANGUAGES),
+    companion: settings.companion,
   };
 }
 

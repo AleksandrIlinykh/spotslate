@@ -4,21 +4,62 @@
   <meta charset="utf-8">
   <title>SpotSlate settings</title>
   <style>
-    :root { color-scheme: light dark; font: 15px/1.5 system-ui, sans-serif; }
-    body { max-width: 560px; margin: 40px auto; padding: 0 16px; }
-    label { display: block; margin: 18px 0 4px; font-weight: 600; }
+    :root {
+      color-scheme: light dark;
+      --page: #f3f4f6;
+      --card: #ffffff;
+      --line: rgba(127, 127, 127, 0.22);
+      --line-strong: rgba(127, 127, 127, 0.45);
+      --button: rgba(127, 127, 127, 0.1);
+      --button-hover: rgba(127, 127, 127, 0.18);
+      --accent: #1a73e8;
+      --accent-soft: rgba(26, 115, 232, 0.1);
+      --on-accent: #ffffff;
+      --error: #c62828;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #1b1c1f;
+        --card: #26272b;
+        --accent: #8ab4f8;
+        --accent-soft: rgba(138, 180, 248, 0.14);
+        --on-accent: #202124;
+        --error: #ef9a9a;
+      }
+    }
+    /* On the body: Chrome gives extension pages a body font of 75%. */
+    body { max-width: 600px; margin: 0 auto; padding: 32px 16px 24px; font: 15px/1.5 system-ui, sans-serif; background: var(--page); }
+    .page-head { display: flex; align-items: center; gap: 14px; margin: 0 0 20px; }
+    .page-head img { flex: none; image-rendering: pixelated; }
+    h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+    #intro { margin: 2px 0 0; opacity: 0.75; }
+    .card { margin: 0 0 16px; padding: 18px 20px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+    .card > h2 { margin: 0; font-size: 17px; line-height: 1.3; }
+    .lead { margin: 2px 0 0; font-size: 13px; opacity: 0.7; }
+    label { display: block; margin: 16px 0 4px; font-weight: 600; }
     input, select { box-sizing: border-box; width: 100%; padding: 6px 8px; font: inherit; }
     .row { display: flex; gap: 8px; }
     .row input { flex: 1; min-width: 0; }
     .hint { margin: 4px 0 0; font-size: 13px; opacity: 0.7; }
-    button { padding: 6px 16px; font: inherit; white-space: nowrap; }
-    .actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-top: 24px; }
-    #status { flex-basis: 100%; overflow-wrap: anywhere; }
-    .footer { margin-top: 32px; }
+    button {
+      padding: 6px 14px; font: inherit; white-space: nowrap; color: inherit; cursor: pointer;
+      background: var(--button); border: 1px solid var(--line-strong); border-radius: 6px;
+    }
+    button:hover { background: var(--button-hover); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+    button.primary:hover { filter: brightness(1.08); }
+    /* Save stays in reach at the bottom of the window while the form scrolls. */
+    .actions {
+      position: sticky; bottom: 12px; z-index: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px;
+      margin: 0 0 16px; padding: 12px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+    #status { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+    .footer { margin: 8px 0 0; text-align: center; }
     fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-    h2 { margin: 32px 0 0; font-size: 18px; }
     #sites { margin: 8px 0 0; padding: 0; list-style: none; }
-    #sites li { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(127, 127, 127, 0.25); }
+    #sites li { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+    #sites li:last-child { border-bottom: 0; }
     #sites .site-host { font-weight: 600; }
     #sites .site-mode { margin-right: auto; font-size: 13px; opacity: 0.75; }
     #sites button { padding: 2px 12px; }
@@ -29,7 +70,7 @@
     .combo-toggle { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 0 9px; border: 0; background: none; color: inherit; cursor: pointer; }
     .combo-toggle[hidden] { display: none; }
     #modelList {
-      position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 1; box-sizing: border-box;
+      position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 3; box-sizing: border-box;
       max-height: 16em; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none;
       background: Field; color: FieldText; border: 1px solid rgba(127, 127, 127, 0.5); border-radius: 4px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -38,78 +79,122 @@
     #modelList li[aria-selected="true"] { background: #1a73e8; color: #fff; }
     @media (prefers-color-scheme: dark) { #modelList li[aria-selected="true"] { background: #8ab4f8; color: #202124; } }
     #writeKey { cursor: pointer; caret-color: transparent; }
-    #status.error, #keysProblem { color: #c62828; }
-    @media (prefers-color-scheme: dark) { #status.error, #keysProblem { color: #ef9a9a; } }
+    #status.error, #keysProblem { color: var(--error); }
+    .companions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    @media (max-width: 480px) { .companions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .companion {
+      position: relative; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 14px 6px 10px;
+      font-weight: 400; text-align: center; border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+    }
+    .companion:hover { border-color: var(--line-strong); }
+    .companion input { position: absolute; top: 8px; left: 8px; width: 1px; height: 1px; margin: 0; opacity: 0; }
+    .companion:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+    .companion:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .companion-picture { display: block; width: 48px; height: 48px; margin-bottom: 8px; }
+    .no-companion { display: block; box-sizing: border-box; width: 36px; height: 36px; margin: 6px; border: 2px dashed var(--line-strong); border-radius: 50%; }
+    .companion-name { font-weight: 600; line-height: 1.3; }
+    .companion-kind { font-size: 12px; opacity: 0.7; }
   </style>
 </head>
 <body>
-  <h1>SpotSlate</h1>
-  <p id="intro">Hold Alt and hover over a paragraph to see its translation above it.</p>
+  <header class="page-head">
+    <img src="icons/icon-48.png" alt="" width="48" height="48">
+    <div>
+      <h1>SpotSlate</h1>
+      <p id="intro">Hold Alt and hover over a paragraph to see its translation above it.</p>
+    </div>
+  </header>
   <form id="form">
     <!-- Disabled until the saved settings are shown, so nothing picked earlier gets overwritten. -->
     <fieldset id="fields" disabled>
-    <label for="targetLang">Translate into</label>
-    <select id="targetLang" name="targetLang"></select>
+    <section class="card" aria-labelledby="translationTitle">
+      <h2 id="translationTitle">Translation</h2>
+      <p class="lead">The language you read and write in, and who translates.</p>
+      <label for="targetLang">Translate into</label>
+      <select id="targetLang" name="targetLang"></select>
 
-    <label for="provider">Translate with</label>
-    <select id="provider" name="provider"></select>
-    <p class="hint" id="providerHint" hidden></p>
-    <p class="hint" id="dataNote"></p>
+      <label for="provider">Translate with</label>
+      <select id="provider" name="provider"></select>
+      <p class="hint" id="providerHint" hidden></p>
+      <p class="hint" id="dataNote"></p>
 
-    <div id="apiFields">
-    <label for="apiKey">API key</label>
-    <div class="row">
-      <input id="apiKey" name="apiKey" type="password" autocomplete="off" spellcheck="false">
-      <button type="button" id="showKey">Show</button>
-    </div>
-    <p class="hint" id="keyHint">Get a key: <a id="keyLink" target="_blank" rel="noreferrer"></a></p>
-
-    <label for="model">Model</label>
-    <div class="row model-row">
-      <div class="combo">
-        <input id="model" name="model" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="modelList" autocomplete="off" spellcheck="false">
-        <button type="button" id="modelToggle" class="combo-toggle" tabindex="-1" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <div id="apiFields">
+      <label for="apiKey">API key</label>
+      <div class="row">
+        <input id="apiKey" name="apiKey" type="password" autocomplete="off" spellcheck="false">
+        <button type="button" id="showKey">Show</button>
       </div>
-      <button type="button" id="loadModels">Load models</button>
-      <ul id="modelList" role="listbox" aria-label="Models" hidden></ul>
-    </div>
-    <p class="hint" id="modelHint" role="status"></p>
+      <p class="hint" id="keyHint">Get a key: <a id="keyLink" target="_blank" rel="noreferrer"></a></p>
 
-    <label for="baseUrl">API URL</label>
-    <input id="baseUrl" name="baseUrl" spellcheck="false">
-    <p class="hint">The address up to /v1. Clear it to go back to the provider's own.</p>
-    </div>
+      <label for="model">Model</label>
+      <div class="row model-row">
+        <div class="combo">
+          <input id="model" name="model" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="modelList" autocomplete="off" spellcheck="false">
+          <button type="button" id="modelToggle" class="combo-toggle" tabindex="-1" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        </div>
+        <button type="button" id="loadModels">Load models</button>
+        <ul id="modelList" role="listbox" aria-label="Models" hidden></ul>
+      </div>
+      <p class="hint" id="modelHint" role="status"></p>
 
-    <h2>Keys</h2>
-    <label for="readKey">Hold to translate</label>
-    <select id="readKey" name="readKey"></select>
-    <p class="hint">Hold it over a paragraph to translate it. Hold it and click a text field to write there.</p>
+      <label for="baseUrl">API URL</label>
+      <input id="baseUrl" name="baseUrl" spellcheck="false">
+      <p class="hint">The address up to /v1. Clear it to go back to the provider's own.</p>
+      </div>
+    </section>
 
-    <label for="writeKey">Write in another language</label>
-    <div class="row">
-      <input id="writeKey" readonly spellcheck="false" autocomplete="off" aria-describedby="keysProblem keysHint">
-      <button type="button" id="resetKeys">Reset keys</button>
-    </div>
-    <p class="hint" id="keysProblem" role="alert"></p>
-    <p class="hint" id="keysHint">Click the field and press a new shortcut: Alt or Ctrl with a letter or a digit. It opens the compose window at the field you are typing in, or next to the mouse.</p>
-    <p class="hint"><span id="toolbarKeyLine">The toolbar window opens with <kbd id="toolbarKey"></kbd>. </span><a href="#" id="chromeShortcuts">Change it in Chrome</a></p>
+    <section class="card" aria-labelledby="keysTitle">
+      <h2 id="keysTitle">Keys</h2>
+      <p class="lead">How you call SpotSlate on a page.</p>
+      <label for="readKey">Hold to translate</label>
+      <select id="readKey" name="readKey"></select>
+      <p class="hint">Hold it over a paragraph to translate it. Hold it and click a text field to write there.</p>
+
+      <label for="writeKey">Write in another language</label>
+      <div class="row">
+        <input id="writeKey" readonly spellcheck="false" autocomplete="off" aria-describedby="keysProblem keysHint">
+        <button type="button" id="resetKeys">Reset keys</button>
+      </div>
+      <p class="hint" id="keysProblem" role="alert"></p>
+      <p class="hint" id="keysHint">Click the field and press a new shortcut: Alt or Ctrl with a letter or a digit. It opens the compose window at the field you are typing in, or next to the mouse.</p>
+      <p class="hint"><span id="toolbarKeyLine">The toolbar window opens with <kbd id="toolbarKey"></kbd>. </span><a href="#" id="chromeShortcuts">Change it in Chrome</a></p>
+    </section>
+
+    <section class="card" aria-labelledby="companionTitle">
+      <h2 id="companionTitle">Companion</h2>
+      <p class="lead">Who keeps you company: by the mouse while you hold the key, then on the translation.</p>
+      <div class="companions" role="radiogroup" aria-labelledby="companionTitle">
+        <label class="companion"><input type="radio" name="companion" value="pup"><span class="companion-picture"></span><span class="companion-name">Spot</span><span class="companion-kind">Shiba, dances</span></label>
+        <label class="companion"><input type="radio" name="companion" value="cat"><span class="companion-picture"></span><span class="companion-name">Ink</span><span class="companion-kind">Black cat, washes</span></label>
+        <label class="companion"><input type="radio" name="companion" value="corgi"><span class="companion-picture"></span><span class="companion-name">Biscuit</span><span class="companion-kind">Corgi, wiggles</span></label>
+        <label class="companion"><input type="radio" name="companion" value="none"><span class="companion-picture"><span class="no-companion"></span></span><span class="companion-name">No one</span><span class="companion-kind">Only the translation</span></label>
+      </div>
+    </section>
 
     <div class="actions">
-      <button type="submit">Save</button>
+      <button type="submit" class="primary">Save</button>
       <button type="button" id="test">Test</button>
       <span id="status" role="status"></span>
     </div>
     </fieldset>
   </form>
-  <h2>Sites</h2>
-  <p class="hint">The switch at the top of the toolbar window turns SpotSlate off for a site, or keeps a site on this computer, or without a context. The sites with a mode of their own:</p>
-  <ul id="sites"></ul>
-  <p class="hint" id="sitesEmpty">None yet: SpotSlate works the same everywhere.</p>
+  <section class="card" aria-labelledby="sitesTitle">
+    <h2 id="sitesTitle">Sites</h2>
+    <p class="lead">The toolbar window turns SpotSlate off on the site you are on, or its AI or its context there. The sites with a mode of their own:</p>
+    <ul id="sites"></ul>
+    <p class="hint" id="sitesEmpty">None yet: SpotSlate works the same everywhere.</p>
+  </section>
   <p class="hint footer">
     <a href="https://github.com/AleksandrIlinykh/spotslate/blob/main/PRIVACY.md" target="_blank" rel="noreferrer">Privacy policy</a>
   </p>
+  <script src="content/config.js"></script>
   <script src="content/strings.js"></script>
   <script src="content/translator.js"></script>
+  <script src="content/pixels.js"></script>
+  <script src="content/pup.js"></script>
+  <script src="content/cat.js"></script>
+  <script src="content/corgi.js"></script>
+  <script src="content/hero.js"></script>
   <script type="module" src="options.js"></script>
 </body>
 </html>

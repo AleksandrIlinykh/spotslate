@@ -1,6 +1,6 @@
 // The companion: a small pixel character by the mouse pointer while Alt is held, and on the edge of the translation
-// popup after. Its frames come from a hero definition (content/pup.js). It never takes the mouse: hovering and clicks
-// go through it to the page.
+// popup after. Its frames come from a hero definition (content/pup.js, cat.js, corgi.js). It never takes the mouse:
+// hovering and clicks go through it to the page.
 (() => {
   const ROOT_ID = 'spotslate-hero';
   const SCALE = 2; // css pixels per cell
@@ -11,6 +11,8 @@
   const HOP_MS = 320;
   const HOP_HEIGHT = 18;
   const HOP_DISTANCE = 48; // a perch that moves farther than this at once is hopped to
+  const REST = 'idle'; // the mood in which a hero does its fidgets now and then
+  const FIDGET_PAUSE_MS = [5000, 12000]; // the shortest and the longest rest between two fidgets
   const SVG = 'http://www.w3.org/2000/svg';
 
   // Inline !important beats any page rule, as for the translation popup.
@@ -30,13 +32,13 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
   // One strip of all the frames of an animation side by side, as runs of same-colored cells.
-  function strip(hero, name) {
+  function strip(hero, name, scale) {
     const { frames } = hero.animations[name];
     const svg = document.createElementNS(SVG, 'svg');
     svg.setAttribute('class', `strip strip-${name}`);
     svg.setAttribute('viewBox', `0 0 ${frames.length * hero.width} ${hero.height}`);
-    svg.setAttribute('width', String(frames.length * hero.width * SCALE));
-    svg.setAttribute('height', String(hero.height * SCALE));
+    svg.setAttribute('width', String(frames.length * hero.width * scale));
+    svg.setAttribute('height', String(hero.height * scale));
     svg.setAttribute('shape-rendering', 'crispEdges');
     const shapes = {};
     frames.forEach((rows, index) =>
@@ -58,13 +60,14 @@
     return svg;
   }
 
-  // The visible window onto the strips, the strip of the current mood stepping through its frames.
-  function spriteCss(hero) {
-    const width = hero.width * SCALE;
+  // The visible window onto the strips, the strip being played stepping through its frames. A strip shown again
+  // starts from its first frame.
+  function spriteCss(hero, scale) {
+    const width = hero.width * scale;
     const rules = Object.entries(hero.animations).map(([name, { fps, frames }]) => {
       const seconds = (frames.length / fps).toFixed(3);
       return `
-        :host([data-mood="${name}"]) .strip-${name} { display: block; }
+        :host([data-play="${name}"]) .strip-${name} { display: block; }
         .strip-${name} { animation: play-${name} ${seconds}s steps(${frames.length}) infinite; }
         @keyframes play-${name} { to { transform: translateX(-${frames.length * width}px); } }`;
     });
@@ -72,7 +75,7 @@
       .sprite {
         position: relative;
         width: ${width}px;
-        height: ${hero.height * SCALE}px;
+        height: ${hero.height * scale}px;
         overflow: hidden;
         transform-origin: 50% 100%;
         animation: appear 160ms ease-out;
@@ -84,11 +87,69 @@
     `;
   }
 
+  const duration = (hero, name) => (hero.animations[name].frames.length / hero.animations[name].fps) * 1000;
+
+  // Draws `hero` in a shadow root of `host`, `scale` css pixels per cell. It plays the animation of the mood it is
+  // given (`data-mood` and `data-play` on the host); resting, it now and then plays one of its fidgets once instead
+  // (`data-play`), unless the user asks for reduced motion.
+  function drawHero(hero, host, { scale = SCALE } = {}) {
+    const shadow = host.attachShadow({ mode: globalThis.spotslate.SHADOW_MODE });
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(spriteCss(hero, scale));
+    shadow.adoptedStyleSheets = [sheet];
+    const sprite = document.createElement('div');
+    sprite.className = 'sprite';
+    sprite.append(...Object.keys(hero.animations).map((name) => strip(hero, name, scale)));
+    shadow.append(sprite);
+    host.dataset.hero = hero.name;
+    let mood = null;
+    let timer = 0;
+
+    const play = (name) => {
+      if (host.dataset.play !== name) host.dataset.play = name;
+    };
+
+    function restAWhile() {
+      const [shortest, longest] = FIDGET_PAUSE_MS;
+      timer = setTimeout(fidget, shortest + Math.random() * (longest - shortest));
+    }
+
+    function fidget() {
+      if (reducedMotion()) {
+        restAWhile();
+        return;
+      }
+      const name = hero.fidgets[Math.floor(Math.random() * hero.fidgets.length)];
+      play(name);
+      timer = setTimeout(() => {
+        play(mood);
+        restAWhile();
+      }, duration(hero, name));
+    }
+
+    return {
+      setMood(next) {
+        if (next === mood) return;
+        clearTimeout(timer);
+        mood = next;
+        host.dataset.mood = next;
+        play(next);
+        if (next === REST && hero.fidgets?.length) restAWhile();
+      },
+      // Stops the fidgets; the next mood starts afresh.
+      stop() {
+        clearTimeout(timer);
+        mood = null;
+      },
+    };
+  }
+
   // `spot()` says where the hero should be on each frame: null for nowhere, { mouse: { x, y }, mood } next to the
   // mouse pointer, or { perch: rect, mood } on the edge of that rect. `mood` names one of the hero's animations.
   function createHero(hero, spot) {
     const size = { width: hero.width * SCALE, height: hero.height * SCALE };
     let host = null;
+    let drawn = null; // drawHero() on the host
     let frame = 0;
     let at = null; // where the hero is drawn: { x, y }
     let kind = null; // 'mouse' or 'perch'
@@ -98,14 +159,7 @@
       host = document.createElement('div');
       host.id = ROOT_ID;
       host.style.cssText = HOST_STYLE;
-      const shadow = host.attachShadow({ mode: globalThis.spotslate.SHADOW_MODE });
-      const sheet = new CSSStyleSheet();
-      sheet.replaceSync(spriteCss(hero));
-      shadow.adoptedStyleSheets = [sheet];
-      const sprite = document.createElement('div');
-      sprite.className = 'sprite';
-      sprite.append(...Object.keys(hero.animations).map((name) => strip(hero, name)));
-      shadow.append(sprite);
+      drawn = drawHero(hero, host);
     }
 
     function targetOf(where) {
@@ -128,6 +182,7 @@
     function hide() {
       cancelAnimationFrame(frame);
       frame = 0;
+      drawn?.stop();
       host?.remove();
       at = null;
       kind = null;
@@ -142,7 +197,7 @@
         return;
       }
       if (!host) build();
-      if (host.dataset.mood !== where.mood) host.dataset.mood = where.mood;
+      drawn.setMood(where.mood);
       const target = targetOf(where);
       const nextKind = where.mouse ? 'mouse' : 'perch';
       if (!at) {
@@ -183,5 +238,5 @@
     };
   }
 
-  Object.assign((globalThis.spotslate ??= {}), { createHero });
+  Object.assign((globalThis.spotslate ??= {}), { createHero, drawHero });
 })();

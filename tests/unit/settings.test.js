@@ -4,10 +4,21 @@ import { DEFAULTS, LANGUAGES, activeProvider, defaultTargetLang, withDefaults } 
 import { PROVIDERS } from '../../extension/lib/providers.js';
 import { DEFAULT_KEYS } from '../../extension/lib/keys.js';
 
-test('withDefaults returns the free built-in translator, the browser language, no provider entries and the default keys when nothing is stored', () => {
-  assert.deepEqual(withDefaults(undefined, 'win', 'ru-RU'), { provider: 'chrome', targetLang: 'ru', providers: {}, keys: DEFAULT_KEYS });
+test('withDefaults returns the free built-in translator, the browser language, no provider entries, the default keys and Spot when nothing is stored', () => {
+  assert.deepEqual(withDefaults(undefined, 'win', 'ru-RU'), {
+    provider: 'chrome',
+    targetLang: 'ru',
+    providers: {},
+    keys: DEFAULT_KEYS,
+    companion: 'pup',
+  });
   assert.equal(withDefaults(undefined, 'win', 'de-AT').targetLang, 'de');
-  assert.deepEqual(DEFAULTS, { provider: 'chrome' });
+  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup' });
+});
+
+test('withDefaults keeps the companion chosen, or none, and brings Spot back for anything else', () => {
+  for (const companion of ['pup', 'cat', 'corgi', 'none']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, companion);
+  for (const companion of ['dragon', '', 7, null, ' cat']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, 'pup');
 });
 
 test('withDefaults drops the agreement field of older settings', () => {
@@ -39,6 +50,7 @@ test('withDefaults keeps the chosen provider and every provider entry, trimmed',
       deepseek: { apiKey: 'sk-d', model: '', baseUrl: 'https://example.com/v1' },
     },
     keys: DEFAULT_KEYS,
+    companion: 'pup',
   });
 });
 
@@ -49,6 +61,7 @@ test('withDefaults drops unknown providers, unknown fields and non-string values
     targetLang: 'ru',
     providers: { openai: { apiKey: '', model: '', baseUrl: '' } },
     keys: DEFAULT_KEYS,
+    companion: 'pup',
   });
 });
 
@@ -63,6 +76,7 @@ test('settings saved before providers existed become the DeepSeek entry', () => 
     targetLang: 'de',
     providers: { deepseek: { apiKey: 'sk-1', model: 'deepseek-v4-pro', baseUrl: 'https://example.com' } },
     keys: DEFAULT_KEYS,
+    companion: 'pup',
   });
 });
 

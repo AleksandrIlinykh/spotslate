@@ -51,8 +51,8 @@ export const test = base.extend({
   // Saves settings with one provider (DeepSeek unless given) pointed at the mock; a blank model means its default.
   setSettings: async ({ serviceWorker, server }, use) => {
     await use(async (overrides = {}) => {
-      const { provider = 'deepseek', targetLang = 'ru', apiKey = 'test-key', model = '', baseUrl = server.url } = overrides;
-      const settings = { provider, targetLang, providers: { [provider]: { apiKey, model, baseUrl } } };
+      const { provider = 'deepseek', targetLang = 'ru', apiKey = 'test-key', model = '', baseUrl = server.url, companion } = overrides;
+      const settings = { provider, targetLang, providers: { [provider]: { apiKey, model, baseUrl } }, ...(companion && { companion }) };
       await serviceWorker.evaluate((value) => chrome.storage.local.set({ settings: value }), settings);
     });
   },

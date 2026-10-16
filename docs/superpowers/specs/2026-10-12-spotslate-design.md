@@ -49,7 +49,7 @@ spotslate/
       sse.js            createSseParser(), deltaFromPayload(payload)
       errors.js         errorFromStatus(status, bodyText, provider), makeError(code, provider)
       sites.js          DEFAULT_SITE_MODE, siteModeOf(sites, site), withSiteMode(sites, site, mode): the mode of each site
-      settings.js       DEFAULTS, LANGUAGES, withDefaults(stored, platform), activeProvider(settings), loadSettings()
+      settings.js       DEFAULTS, LANGUAGES, COMPANIONS, withDefaults(stored, platform), activeProvider(settings), loadSettings()
       keys.js           DEFAULT_KEYS, READ_KEYS, shortcutProblem(shortcut, platform), checkedKeys(), formatShortcut(), readKeyName(), shortcutFromEvent(), currentPlatform()
     content/            classic scripts (not modules) sharing globalThis.spotslate
       config.js         SHADOW_MODE: 'closed' (the e2e tests run a copy with 'open')
@@ -65,8 +65,11 @@ spotslate/
       correction.js     parseCorrection(answer), diffWords(before, after): a checked text and what changed in it
       composer.js       createComposer(options): the compose window, also used by the toolbar popup
       compose-window.js createComposeWindow(): the compose window at a text field or by the mouse
-      pup.js            heroes.pup: the companion's frames
-      hero.js           createHero(hero, spot): the companion by the mouse and on the popup
+      pixels.js         pixels: drawFrame(width, height, layers), mirror(part), withRows(part, rows): drawing the companions from parts
+      pup.js            heroes.pup: Spot, a shiba
+      cat.js            heroes.cat: Ink, a black cat
+      corgi.js          heroes.corgi: Biscuit, a corgi
+      hero.js           drawHero(hero, host, options), createHero(hero, spot): a companion drawn, by the mouse and on the popup
       main.js           trigger, what to translate, talking to background, closing, page cache, Alt+click and Alt+T
     compose.html        the toolbar popup: the compose window on its own
     compose-page.js
@@ -105,7 +108,7 @@ The extension code lives apart from `node_modules` so Chrome does not pick up de
 - Tabs open before an install or an update are left as they are: they need a reload (the README says so, and after an update Alt there says "The extension was updated. Reload the page."). Injecting the content scripts into them (`chrome.scripting.executeScript`) would need host access to every site (`<all_urls>` in `host_permissions`): the content-script matches do not grant it. That would add no install warning, but it would let background send requests to any site, so by choice the permissions stay narrow.
 - `optional_host_permissions: ["https://*/*", "http://*/*"]`: any other API host, asked for when the user saves or tests a URL outside the list.
 - `background: { service_worker: "background.js", type: "module" }`.
-- `content_scripts: [{ matches: ["<all_urls>"], js: ["content/config.js", "content/strings.js", "content/block.js", "content/selection.js", "content/language.js", "content/translator.js", "content/notes-panel.js", "content/lang-picker.js", "content/popup.js", "content/highlight.js", "content/correction.js", "content/composer.js", "content/compose-window.js", "content/pup.js", "content/hero.js", "content/main.js"], run_at: "document_end" }]`, top frame only. `document_end` rather than `document_idle`: the script is guaranteed to be in place by the `load` event (the e2e tests need this), and it only registers event listeners, so it does not slow page loading.
+- `content_scripts: [{ matches: ["<all_urls>"], js: ["content/config.js", "content/strings.js", "content/block.js", "content/selection.js", "content/language.js", "content/translator.js", "content/notes-panel.js", "content/lang-picker.js", "content/popup.js", "content/highlight.js", "content/correction.js", "content/composer.js", "content/compose-window.js", "content/pixels.js", "content/pup.js", "content/cat.js", "content/corgi.js", "content/hero.js", "content/main.js"], run_at: "document_end" }]`, top frame only. `document_end` rather than `document_idle`: the script is guaranteed to be in place by the `load` event (the e2e tests need this), and it only registers event listeners, so it does not slow page loading.
 - `options_ui: { page: "options.html", open_in_tab: true }`.
 - `icons` and `action.default_icon`: `icons/icon-{16,32,48,128}.png`.
 - `action: { default_title: "SpotSlate: write in another language", default_popup: "compose.html" }`: the icon opens the compose window. The settings open from its gear and from the "Options" item Chrome adds to the icon's menu.
@@ -121,6 +124,7 @@ Stored in `chrome.storage.local` under the `settings` key:
 | `targetLang` | the browser's language, else `"en"` | target language code; until one is saved, `defaultTargetLang()` takes Chrome's interface language (`chrome.i18n.getUILanguage()`) when it is in `LANGUAGES`, else English |
 | `providers` | `{}` | `{ [id]: { apiKey, model, baseUrl } }`, remembered for every provider the user filled in |
 | `keys` | `{ read: "Alt", write: Alt+T }` | the key held to read and the shortcut to write (see "Keys") |
+| `companion` | `"pup"` | the companion (see "Companion"): `pup`, `cat` or `corgi` (`COMPANIONS`), or `none`; anything else is `pup` |
 
 A blank `model` or `baseUrl` means the provider's default, so a changed default reaches everyone. Values are trimmed (keys are often pasted with a space or a line break); unknown providers and fields are dropped; an unknown provider falls back to `chrome`, an unknown language code to `ru`; the retired DeepSeek models `deepseek-chat` and `deepseek-reasoner` fall back to the default model. Settings saved before providers existed (`apiKey`, `model`, `baseUrl` at the top level) become the `deepseek` entry, and DeepSeek stays in use. `activeProvider(settings)` gives the provider in use with its preset fields, key, model and URL (defaults filled in, trailing `/` removed).
 
@@ -144,13 +148,15 @@ Providers (`lib/providers.js`):
 
 Each preset also has a group (`free`, `cloud`, `local`, `other`), whether a key is required (cloud ones only), the page where keys are made, 0 to 3 suggested models and an optional one-line hint (for Qwen: keys work only in their own region). Model names come from the providers' docs as of October 2026; the model field is free text, so a stale suggestion never blocks anyone.
 
-The settings hold API keys, so web pages never see them. On every start background calls `chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })`: only extension pages and the service worker can read `chrome.storage.local`, content scripts cannot. Content gets only the target language, the engine and the keys: `{ type: 'page-settings' }` is answered with `{ targetLang, engine, keys }`, and after any change of the settings background sends `{ type: 'settings-changed', targetLang, engine, keys }` to every tab. `keys` is `{ read, readName, write }`.
+The settings hold API keys, so web pages never see them. On every start background calls `chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })`: only extension pages and the service worker can read `chrome.storage.local`, content scripts cannot. Content gets only the target language, the engine, the keys and the companion: `{ type: 'page-settings' }` is answered with `{ targetLang, engine, keys, companion }`, and after any change of the settings background sends `{ type: 'settings-changed', targetLang, engine, keys, companion }` to every tab. `keys` is `{ read, readName, write }`.
 
 Pages cannot drive SpotSlate or look into it. The handlers of the mouse and the keys act only on the user's own input (`event.isTrusted`), so a page cannot fake Alt and the mouse to have its text translated with the user's key. The popup, the companion and the compose window live in closed shadow roots (`SHADOW_MODE` in `content/config.js`), so the page can read neither a translation, nor a draft, nor the site context, and cannot press their buttons. The e2e tests run a copy of the extension with the roots open; one test checks that the extension itself keeps them closed.
 
 `LANGUAGES` maps a code to its English name, used both in the prompt and in the settings page: ru, en, de, fr, es, it, pt, pl, uk, tr, zh (Chinese (Simplified)), ja, ko.
 
-Settings page (`options.html`), top to bottom:
+Settings page (`options.html`): the icon, the name and a line on how to start, then the settings in blocks, so the page reads as a few short groups rather than one long list. Each block is a card (rounded, a thin border, white on a light grey page, dark grey on a darker one) with a title and a line under it on what it is for. Chrome gives extension pages a body font of 75%; the page sets 15 px on its body. Top to bottom:
+
+**Translation** ("The language you read and write in, and who translates."):
 
 - "Translate into": the language picker.
 - "Translate with": a select grouped into "Free, on this computer", "Cloud APIs", "Local AI models" and "Other", with the preset's hint under it. For the free translator the key, model and URL fields are hidden (`#apiFields`).
@@ -158,7 +164,16 @@ Settings page (`options.html`), top to bottom:
 - "API key" (`type=password`, "API key (optional)" for local and custom ones) with a "Show"/"Hide" button and a "Get a key" link to the provider's key page (hidden when there is none).
 - "Model": free text with a list of models to pick from (the preset's, then those loaded) and a "Load models" button that asks the API for its `/models` list, keeps chat models only and adds them to the list ("Loaded N models." or the error under the field). Blank with "Choose or type a model" when the provider has no default. The list is the page's own combobox (`#modelList`, `role="listbox"`) rather than a `datalist`, which Chrome shows as a narrow bubble with only the models matching the text already in the field: as wide as the fields above, it opens on a click in the field, on Down or on the arrow at the field's right end (hidden when there is nothing to pick) with every model and the one in the field marked; typing filters it (case aside); Up and Down move, Enter picks (and does not save the form), Escape and leaving the field close it; a click on a model picks it, and the focus stays in the field.
 - "API URL": the address up to `/v1`; clearing it brings back the provider's own.
+
+**Keys** ("How you call SpotSlate on a page."): the key held to read and the shortcut to write (see "Keys").
+
+**Companion** ("Who keeps you company: by the mouse while you hold the key, then on the translation."): four tiles in a row (two by two in a narrow window), radio buttons (`name="companion"`, the arrow keys move between them): Spot ("Shiba, dances"), Ink ("Black cat, washes"), Biscuit ("Corgi, wiggles") and "No one" ("Only the translation", a dashed circle for a picture). Each companion moves in its tile as on pages (`drawHero` at 3 css px per cell): resting with its fidgets now and then, dancing while the mouse or the focus is on its tile. The chosen tile is outlined and tinted in the accent color.
+
+**Save and Test** in a bar of their own under the blocks that stays at the bottom of the window while the blocks above scroll (`position: sticky`), so Save is in reach from anywhere in the form; "Save" is the accent-colored button.
+
 - "Save" stores all providers the user filled in (defaults stored as blanks) and says "Saved". "Test" translates "The quick brown fox jumps over the lazy dog." with the fields as they are, without saving, through the same streaming path as pages, and shows "Works, {seconds} s: {translation}" or the error in red. With the free translator it runs Chrome's translator right in the settings page, from English (from German when the target is English); the click lets Chrome download that model, with "Downloading the translation model: {n}%" meanwhile.
+
+**Sites** (outside the form: each change is saved at once): the sites with a mode of their own (see "Site modes").
 
 At the bottom, a "Privacy policy" link to `PRIVACY.md` on GitHub, the policy the store listing points to.
 
@@ -324,18 +339,26 @@ Closing:
 
 On close, the port to background is disconnected and any unfinished API request is cancelled.
 
-## Companion (content/hero.js, content/pup.js)
+## Companion (content/hero.js, content/pup.js, cat.js, corgi.js)
 
-A small pixel character keeps the reader company, so that SpotSlate has a face. The first one is Spot, a shiba (`content/pup.js`). A hero is only data, so others can be added and picked in the settings later.
+A small pixel character keeps the reader company, so that SpotSlate has a face. The settings offer three, Spot by default, or none:
 
-- A hero is `{ name, width, height, palette, animations }`. Each animation, `{ fps, frames }`, loops. A frame is `height` rows of `width` cells: `.` is transparent, any other character a color of the palette. Pup is 16 by 16 cells drawn at 2 css px per cell (32 px), with `dance` (4 frames at 7 fps: a crouch and a jump with one paw up, each paw in turn) and `idle` (6 frames at 4 fps: standing, with one blink).
-- `createHero(hero, spot)` draws it as inline SVG strips, one per animation, with runs of same-colored cells as paths (`crispEdges`), in its own host `#spotslate-hero`: a closed shadow root, `position: fixed`, the top z-index and `pointer-events: none`, so hovering and clicks go through it to the page. CSS steps through the frames of the current mood. With `prefers-reduced-motion` the frames, the pop-in and the hop stop.
+- **Spot**, a shiba (`content/pup.js`): dances with a paw up, each paw in turn (`dance`, 4 frames at 7 fps), and stands with one blink (`idle`, 6 frames at 4 fps).
+- **Ink**, a black cat (`content/cat.js`) with yellow eyes: kneads with its eyes shut in a smile, one front paw and then the other (`dance`, 4 frames at 6 fps); sits with its tail swaying, a blink and an ear twitch (`idle`, 8 frames at 4 fps); now and then licks a paw and washes its face with it (`lick`, 16 frames at 6 fps) or yawns (`yawn`, 7 frames at 5 fps).
+- **Biscuit**, a corgi (`content/corgi.js`): turns its back and wiggles its round white rear from side to side (`dance`, 4 frames at 8 fps); sits panting with a blink (`idle`, 6 frames at 4 fps); now and then turns round to wiggle and back (`wiggle`, 9 frames at 8 fps).
+- **No one** (`none`): nothing comes by the mouse or onto the popup.
+
+The choice reaches open pages at once (`settings-changed`): the companion there goes and the new one comes where it should be (`setCompanion` in `main.js`). Until a page has the settings it shows no companion.
+
+- A hero is `{ name, width, height, palette, animations, fidgets? }`. Each animation, `{ fps, frames }`, loops. A frame is `height` rows of `width` cells: `.` is transparent, any other character a color of the palette. Every hero has `dance` and `idle`; `fidgets` names its other animations, the things it does now and then while resting, each ending as it rests. Frames are drawn from parts (`content/pixels.js`: `drawFrame` lays parts over each other, `mirror`, `withRows` swaps a few rows of a part). All three are 16 by 16 cells drawn at 2 css px per cell (32 px).
+- `drawHero(hero, host, { scale })` draws a hero into a closed shadow root of `host` as inline SVG strips, one per animation, with runs of same-colored cells as paths (`crispEdges`). CSS steps through the frames of the strip being played (`data-play` on the host); a strip shown again starts from its first frame. `setMood(mood)` plays that mood (`data-mood`); resting (`idle`) it waits 5 to 12 s (at random), plays one of its fidgets at random once (`data-play`), then rests again, and so on; with `prefers-reduced-motion` it does no fidgets. `stop()` ends them. `data-hero` on the host is the hero's name.
+- `createHero(hero, spot)` puts it in its own host `#spotslate-hero`: `position: fixed`, the top z-index and `pointer-events: none`, so hovering and clicks go through it to the page. With `prefers-reduced-motion` the frames, the pop-in and the hop stop.
 - Where it is (`heroSpot` in `main.js`), checked on every animation frame while it is shown:
   - while Alt is held (not in a combination) and the mouse position is known: 12 px right of and 16 px below the tip of the mouse pointer (left of it or above it at the window's edges), following it with a slight lag (40% of the way each frame);
   - else while the popup is open: standing on its top edge, 10 px from its left, or under its bottom edge when there is no room above. It hops there in an arc (320 ms, 18 px high) and then moves with the popup;
-  - else nowhere, and it is removed.
+  - else nowhere, and it is removed (and its fidgets stop).
 - Its mood is `dance` until the popup has a translation or an error to show, then `idle`.
-- It is woken by Alt going down, by the mouse moving with Alt held and by the popup opening (`hero.wake()`), and stops its frame loop when it has nowhere to be.
+- It is woken by Alt going down, by the mouse moving with Alt held, by the popup opening and by being chosen (`hero.wake()`), and stops its frame loop when it has nowhere to be.
 
 ## Reporting a bad translation
 
@@ -439,7 +462,7 @@ Content opens `chrome.runtime.connect({ name: 'translate' })` and sends `{ text,
 
 For the compose window, `chrome.runtime.connect({ name: 'compose' })` takes `{ text, from, to, purpose, site }` (`purpose` is `'write'`, `'check'` or `'correct'`; `site` only from the toolbar popup, which is not a tab) and answers like `'translate'`. Messages: `{ type: 'compose-open', site?, pageLang }` → `{ languages, from, source, to, engine, providerName, site, notes, draft }`; `{ type: 'compose-target', site?, lang }` and `{ type: 'compose-source', site?, lang }` save the languages chosen on the right and on the left; `{ type: 'compose-draft', draft }` keeps the draft; `{ type: 'read-lang', lang }` counts a text read with Chrome's translator; `{ type: 'notes', site? }` and `{ type: 'clear-notes', site? }` read and clear the site context. The site of a message is the sender tab's host; extension pages name it themselves.
 
-A separate `chrome.runtime.sendMessage({ type: 'open-options' })` message makes background open the settings, and `{ type: 'page-settings' }` with `{ targetLang, engine, providerName, keys, languages }` (`languages`: the codes, for the pickers), where `engine` is `'browser'` for the free translator and `'api'` otherwise (see "Settings" and "Free translator"). Until the answer is there the page uses English and the API; an outline and hint shown meanwhile, with the read key held, are shown again once it is.
+A separate `chrome.runtime.sendMessage({ type: 'open-options' })` message makes background open the settings, and `{ type: 'page-settings' }` with `{ targetLang, engine, providerName, keys, languages, companion }` (`languages`: the codes, for the pickers), where `engine` is `'browser'` for the free translator and `'api'` otherwise (see "Settings" and "Free translator"). Until the answer is there the page uses English and the API; an outline and hint shown meanwhile, with the read key held, are shown again once it is.
 
 ## API request (background.js, lib/chat.js, lib/providers.js)
 
@@ -506,11 +529,11 @@ Unit tests (`node --test`, no dependencies):
 - `notes.js`: the update prompt (the language, the rules, current notes or "(none yet)", passages and translations in tags, oldest first; a passage cannot close its tag); `cleanNotes` (fences, quotes, headings, two paragraphs, the 700-character cut at a sentence or a space, empty); taking queued passages (newest first within the budget, in order); the notes block.
 - `selection.js`: `wordsAround` keeps 8 words on each side, stops at sentence boundaries, works for non-Latin scripts.
 - `errors.js`: every status in the table; a JSON body with `error.message`; a non-JSON body.
-- `pup.js`: every frame fills the hero's size with transparent cells and palette colors; the dance and the rest loop over several frames, and the dance moves.
+- `pixels.js`, `pup.js`, `cat.js`, `corgi.js`: the companions in the settings are the heroes there are; every hero has a name, a dance and a rest that loop over several frames, and every dance moves; every frame fills the hero's size with transparent cells and palette colors; fidgets are animations of their own that end as the hero rests (Spot has none, the cat licks and yawns, the corgi wiggles); the corgi's dance is all from behind; `drawFrame` lays parts in order and cuts what falls outside.
 - `compose.js`: the compose and correction prompts with and without the site context; counting languages; choosing the language to write in from the counts, and the language of the draft.
 - `correction.js`: reading the corrected text and its notes, also from an answer without the form; what changed, word by word, also in the longest drafts.
 - `sites.js`: the default mode; stored modes read with every value checked; setting one keeps the others, and the default leaves the list.
-- `settings.js`: the starting language from the browser's, or English; the old agreement field dropped; `withDefaults` keeps every provider entry, drops unknown ones, moves old settings to DeepSeek, keeps keys allowed on the platform and replaces the rest; `activeProvider` fills in the defaults.
+- `settings.js`: the starting language from the browser's, or English; the old agreement field dropped; `withDefaults` keeps every provider entry, drops unknown ones, moves old settings to DeepSeek, keeps keys allowed on the platform and replaces the rest, keeps a known companion or none and brings Spot back for anything else; `activeProvider` fills in the defaults.
 - `pack.mjs`: the zip holds every file of `extension/`, unchanged, with the manifest at the top.
 - `manifest.json`: the icons exist at every declared size; every content script exists; the welcome page loads them in the manifest order.
 - `strings.js`: every language has every text with the same placeholders as English; `t` fills them and falls back to English; language names in the interface language.
@@ -678,5 +701,9 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   153. A language list scrolls and stays open, never scrolls the page past its end, and follows its button when the page scrolls.
   154. The model list opens on a click with every model, the current one marked, as wide as the fields above; typing filters it, a click picks a model that is then saved; the keys work it (Down, Enter without saving, Escape); the arrow opens and closes it and is hidden with nothing to pick.
   149. Alt+click on a selection in a field or an editor translates it, keeps it selected and opens no compose window; without a selection Alt+click on a field opens the window.
+  155. The companion chosen in the settings comes instead of the pup (the cat kneading by the mouse), and one chosen while a page is open comes there at once (the corgi wiggling its rear); with none, nothing comes by the mouse or onto the popup.
+  156. Resting on the popup, the cat now and then licks itself, then rests again; with reduced motion it keeps still.
+  157. The settings page is in blocks with titles (Translation, Keys, Companion, Sites); the companions move in their tiles, Spot chosen; a hovered one dances; one picked by a click or the arrow keys is saved, and so is none.
+  158. Save stays in the window while the page scrolls.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

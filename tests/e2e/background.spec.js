@@ -214,13 +214,21 @@ test.describe('other providers', () => {
 test.describe('free built-in translator', () => {
   const pageSettings = (page) => page.evaluate(() => chrome.runtime.sendMessage({ type: 'page-settings' }));
 
-  test('pages are told which engine translates, and the keys', async ({ page, setSettings }) => {
+  test('pages are told which engine translates, the keys and the companion', async ({ page, setSettings }) => {
     const keys = { read: 'Alt', readName: 'Alt', write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' } };
     const siteMode = { off: false, local: false, noContext: false }; // an extension page is on no site
     const languages = ['ru', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'uk', 'tr', 'zh', 'ja', 'ko']; // for the pickers
     await setSettings({ targetLang: 'de' });
-    expect(await pageSettings(page)).toEqual({ targetLang: 'de', engine: 'api', providerName: 'DeepSeek', keys, siteMode, languages });
-    await setSettings({ provider: 'chrome', targetLang: 'de' });
+    expect(await pageSettings(page)).toEqual({
+      targetLang: 'de',
+      engine: 'api',
+      providerName: 'DeepSeek',
+      keys,
+      siteMode,
+      languages,
+      companion: 'pup',
+    });
+    await setSettings({ provider: 'chrome', targetLang: 'de', companion: 'cat' });
     expect(await pageSettings(page)).toEqual({
       targetLang: 'de',
       engine: 'browser',
@@ -228,6 +236,7 @@ test.describe('free built-in translator', () => {
       keys,
       siteMode,
       languages,
+      companion: 'cat',
     });
   });
 

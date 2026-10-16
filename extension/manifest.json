@@ -39,7 +39,10 @@
         "content/correction.js",
         "content/composer.js",
         "content/compose-window.js",
+        "content/pixels.js",
         "content/pup.js",
+        "content/cat.js",
+        "content/corgi.js",
         "content/hero.js",
         "content/main.js"
       ],

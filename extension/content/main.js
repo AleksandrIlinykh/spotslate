@@ -45,7 +45,6 @@
   });
   const highlight = createHighlight();
   const composeWindow = createComposeWindow();
-  const hero = createHero(heroes.pup, heroSpot);
 
   let mouseX = null;
   let mouseY = null;
@@ -70,6 +69,8 @@
   let modelAsked = false; // whether this page has asked Chrome to get its translation model ready
   let settingsKnown = false; // whether background has answered with the settings below
   let languages = null; // the languages SpotSlate translates into, in the order of the settings
+  let companion = null; // the companion chosen in the settings: a hero's name in `heroes`, or 'none'
+  let hero = null; // createHero() for it, none until the settings are here
   // The key held to read ('Alt' or 'Control') with its name on this platform, and the shortcut to write
   // (see lib/keys.js); background sends the ones in the settings.
   let keys = { read: 'Alt', readName: 'Alt', write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' } };
@@ -86,6 +87,7 @@
       providerName = answer?.providerName ?? '';
       siteMode = answer?.siteMode ?? siteMode;
       languages = answer?.languages ?? languages;
+      setCompanion(answer?.companion ?? 'pup');
       settingsKnown = true;
       applySettings();
       if (readDown) updatePreview();
@@ -113,6 +115,15 @@
     releaseReadKey();
     closePopup();
     composeWindow.close();
+  }
+
+  // The companion chosen, at once: the one there goes, the new one comes where it should be.
+  function setCompanion(name) {
+    if (name === companion) return;
+    companion = name;
+    hero?.hide();
+    hero = Object.hasOwn(heroes, name) ? createHero(heroes[name], heroSpot) : null;
+    hero?.wake();
   }
 
   // Where the companion is: by the mouse while the read key is held, then on the popup's edge until it closes. It dances
@@ -206,7 +217,7 @@
     popup.open(picked.target);
     highlight.anchor(picked.target, () => popup.getRect());
     if (readDown) updatePreview(); // the outline under the mouse is the popup's text now, with the line
-    hero.wake();
+    hero?.wake();
     if (already) popup.setNotice(t(targetLang, 'hintAlready'));
     else load();
   }
@@ -452,7 +463,7 @@
       if (readDown && !combo) {
         scheduleTrigger();
         schedulePreview();
-        hero.wake();
+        hero?.wake();
       }
       if (event.buttons === 0) checkLeave(); // a drag, e.g. selecting popup text, never closes it
     },
@@ -473,7 +484,7 @@
         if (!combo) {
           scheduleTrigger();
           updatePreview();
-          hero.wake();
+          hero?.wake();
         }
         return;
       }
@@ -606,6 +617,7 @@
     keys = message.keys ?? keys;
     providerName = message.providerName ?? '';
     languages = message.languages ?? languages;
+    setCompanion(message.companion ?? 'pup');
     applySettings();
     modelAsked = false;
     if (targetLang !== before) translateAgain();

@@ -1,6 +1,7 @@
-// Spot, the companion: a pixel shiba drawn from parts. Each animation is a loop of frames; a frame is a list of
-// rows, one character per cell, '.' for transparent and the rest from `palette`.
+// Spot, the first companion: a pixel shiba drawn from parts (content/pixels.js). Each animation is a loop of frames;
+// a frame is a list of rows, one character per cell, '.' for transparent and the rest from `palette`.
 (() => {
+  const { drawFrame, mirror } = globalThis.spotslate.pixels;
   const WIDTH = 16;
   const HEIGHT = 16;
 
@@ -29,21 +30,6 @@
   const ARM_DOWN = ['.kk', 'kok', 'kwk', '.k.'];
   const ARM_UP = ['.k...', 'kwk..', 'kok..', '.kok.', '..kok', '...kk'];
 
-  const mirror = (part) => part.map((row) => [...row].reverse().join(''));
-
-  // Draws parts in order onto an empty frame: [part, x, y].
-  function frame(...layers) {
-    const cells = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill('.'));
-    for (const [part, left, top] of layers) {
-      part.forEach((row, y) =>
-        [...row].forEach((cell, x) => {
-          if (cell !== '.' && cells[top + y]?.[left + x] !== undefined) cells[top + y][left + x] = cell;
-        }),
-      );
-    }
-    return cells.map((row) => row.join(''));
-  }
-
   // The whole dog: `pose` is 'crouch', 'stand' or 'jump', `arms` 'down', 'left' or 'right' (the one raised).
   function dog({ pose = 'stand', arms = 'down', head = HEAD }) {
     const top = { crouch: 3, stand: 2, jump: 1 }[pose];
@@ -52,7 +38,7 @@
     const layers = [[head, 2, top], [body(chest), 5, bodyTop]];
     layers.push(arms === 'left' ? [ARM_UP, 0, top + 4] : [ARM_DOWN, 3, bodyTop]);
     layers.push(arms === 'right' ? [mirror(ARM_UP), 11, top + 4] : [mirror(ARM_DOWN), 10, bodyTop]);
-    return frame(...layers);
+    return drawFrame(WIDTH, HEIGHT, layers);
   }
 
   const pup = {
