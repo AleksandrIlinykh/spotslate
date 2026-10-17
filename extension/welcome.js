@@ -14,7 +14,7 @@ const PRACTICE = {
 };
 
 const { languageName } = globalThis.spotslate;
-const select = document.getElementById('targetLang');
+const select = /** @type {HTMLSelectElement} */ (document.getElementById('targetLang'));
 const practice = document.getElementById('practice');
 const settings = await loadSettings();
 

@@ -92,6 +92,7 @@
   // Draws `hero` in a shadow root of `host`, `scale` css pixels per cell. It plays the animation of the mood it is
   // given (`data-mood` and `data-play` on the host); resting, it now and then plays one of its fidgets once instead
   // (`data-play`), unless the user asks for reduced motion.
+  /** @type {SpotSlate['drawHero']} */
   function drawHero(hero, host, { scale = SCALE } = {}) {
     const shadow = host.attachShadow({ mode: globalThis.spotslate.SHADOW_MODE });
     const sheet = new CSSStyleSheet();
@@ -146,6 +147,7 @@
 
   // `spot()` says where the hero should be on each frame: null for nowhere, { mouse: { x, y }, mood } next to the
   // mouse pointer, or { perch: rect, mood } on the edge of that rect. `mood` names one of the hero's animations.
+  /** @type {SpotSlate['createHero']} */
   function createHero(hero, spot) {
     const size = { width: hero.width * SCALE, height: hero.height * SCALE };
     let host = null;

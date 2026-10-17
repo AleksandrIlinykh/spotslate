@@ -7,11 +7,14 @@
   "scripts": {
     "test": "node --test",
     "test:e2e": "playwright test",
+    "types": "tsc -p jsconfig.json",
     "pack": "node tools/pack.mjs",
     "icons": "node tools/icons.mjs",
     "store": "node tools/store-shots.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0"
+    "@playwright/test": "^1.64.0",
+    "@types/chrome": "^0.3.5",
+    "typescript": "^7.0.2"
   }
 }

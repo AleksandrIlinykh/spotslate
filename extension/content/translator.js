@@ -7,12 +7,14 @@
   const pairs = new Map();
 
   // A language tag (from <html lang> or the detector) as a code the Translator accepts; null for none.
+  /** @type {SpotSlate['languageCode']} */
   function languageCode(tag) {
     if (typeof tag !== 'string' || tag === '' || tag.toLowerCase() === 'und') return null;
     return TRADITIONAL_CHINESE.test(tag) ? 'zh-Hant' : tag.split('-')[0].toLowerCase();
   }
 
   // The language to translate from: the detector's top guess, when it is confident enough.
+  /** @type {SpotSlate['sourceLanguage']} */
   function sourceLanguage(results) {
     const top = results?.[0];
     return top && top.confidence >= MIN_CONFIDENCE ? languageCode(top.detectedLanguage) : null;
@@ -23,7 +25,7 @@
     pair.ready = Translator.create({
       ...options,
       monitor(monitor) {
-        monitor.addEventListener('downloadprogress', (event) => {
+        monitor.addEventListener('downloadprogress', (/** @type {Event & { loaded: number }} */ event) => {
           pair.share = event.loaded;
           for (const listener of pair.listeners) listener(event.loaded);
         });
@@ -36,6 +38,7 @@
 
   // The pair's translator: one already made or being made, or a new one. Chrome downloads a model once for each
   // pair of languages, and only right after a click or a key press. Resolves to { translator } or { problem }.
+  /** @returns {Promise<{ translator?: { translate(text: string): Promise<string> }, problem?: SpotSlate.BrowserProblem }>} */
   async function pairFor(source, target, onProgress) {
     const key = `${source}>${target}`;
     let pair = pairs.get(key);
@@ -61,6 +64,7 @@
   // paragraph around a selection) or else taken from `fallbackLang` (the page's). onProgress gets the share of a
   // model download, 0 to 1. Resolves to { text, source } or { problem, source?, detail? }, where problem is
   // 'unsupported', 'unknown_language', 'unavailable', 'needs_download' or 'failed'.
+  /** @type {SpotSlate['translateInBrowser']} */
   async function translateInBrowser(text, targetLang, { sourceLang, sample = text, fallbackLang, onProgress } = {}) {
     if (!globalThis.Translator) return { problem: 'unsupported' };
     let source = sourceLang;
@@ -82,6 +86,7 @@
 
   // Gets a pair ready ahead of time, so that its first translation is instant. Resolves to null when it is ready
   // (or there is nothing to translate), else to the problem, as translateInBrowser names them.
+  /** @type {SpotSlate['prepareInBrowser']} */
   async function prepareInBrowser(source, targetLang, { onProgress } = {}) {
     if (!source || source === targetLang) return null;
     if (!globalThis.Translator) return 'unsupported';
@@ -95,6 +100,7 @@
   // What to tell the user about a problem, and which button helps: 'download', 'settings' or 'retry'.
   // What went wrong with Chrome's translator into `targetLang`, worded in `ui` (the language the user translates into on
   // pages, English on the settings page), and the button that helps.
+  /** @type {SpotSlate['describeProblem']} */
   function describeProblem({ problem, source, detail }, targetLang, ui = targetLang) {
     const { t, languageName } = globalThis.spotslate;
     const pair = () => `${languageName(source, ui)} \u2192 ${languageName(targetLang, ui)}`;
@@ -113,6 +119,7 @@
   }
 
 
+  /** @type {SpotSlate['forgetTranslators']} */
   function forgetTranslators() {
     pairs.clear();
   }

@@ -6,6 +6,7 @@
   const SENSITIVE_AUTOCOMPLETE = /^(current-password|new-password|one-time-code|cc-)/;
 
   // Element under the point, looking inside open shadow roots (web components).
+  /** @type {SpotSlate['elementAt']} */
   function elementAt(x, y) {
     let element = document.elementFromPoint(x, y);
     while (element?.shadowRoot) {
@@ -25,6 +26,7 @@
   // ancestor with readable text, as { target, text }. Paragraphs of rich text editors (contenteditable,
   // e.g. Confluence in edit mode) count too. When the block can't be translated the result is
   // { target, reason } with reason 'editable' (a form field) or 'too-long'; null means there is nothing to read.
+  /** @type {SpotSlate['inspectBlock']} */
   function inspectBlock(start) {
     let node = start?.nodeType === Node.TEXT_NODE ? start.parentElement : start;
     if (!(node instanceof Element)) return null;
@@ -41,6 +43,7 @@
   }
 
   // Whether the point is over a line of text rather than a container's padding or margin.
+  /** @type {SpotSlate['isOverText']} */
   function isOverText(x, y) {
     const node = document.caretRangeFromPoint?.(x, y)?.startContainer;
     if (node?.nodeType !== Node.TEXT_NODE) return false;
@@ -50,6 +53,7 @@
   }
 
   // Whether `field` is a textarea or a text or search input, and not one for a password, a one-time code or a card.
+  /** @type {SpotSlate['isTextField']} */
   function isTextField(field) {
     if (!(field instanceof HTMLTextAreaElement || field instanceof HTMLInputElement)) return false;
     if (field instanceof HTMLInputElement && !TEXT_INPUTS.has((field.getAttribute('type') ?? '').toLowerCase())) return false;
@@ -60,6 +64,7 @@
   // A field the user writes prose in, for the compose window: a textarea, a text or search input, or the whole
   // rich text editor (contenteditable) around the node; null for anything else, and never for passwords,
   // one-time codes or card numbers.
+  /** @type {SpotSlate['writableField']} */
   function writableField(start) {
     const node = start?.nodeType === Node.TEXT_NODE ? start.parentElement : start;
     if (!(node instanceof Element)) return null;

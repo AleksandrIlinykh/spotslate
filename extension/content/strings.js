@@ -927,6 +927,7 @@
   };
 
   // `lang`'s text for `key` with its {placeholders} filled from `params`; English when the language or the text is missing.
+  /** @type {SpotSlate['t']} */
   function t(lang, key, params = {}) {
     const text = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;
     return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
@@ -934,6 +935,7 @@
 
   // A language's name in the language `ui`, as Chrome knows it. `capitalized` for a label or a list, where some
   // languages (Russian, French, ...) would otherwise start it with a small letter.
+  /** @type {SpotSlate['languageName']} */
   function languageName(code, ui, { capitalized = false } = {}) {
     let name = code;
     try {

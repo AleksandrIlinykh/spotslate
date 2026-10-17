@@ -97,6 +97,7 @@ export function shortcutProblem(shortcut, platform) {
 }
 
 // Stored keys, each replaced by its default when it is unknown, malformed or refused on this platform.
+/** @returns {SpotSlate.Keys} */
 export function checkedKeys(stored, platform) {
   const read = READ_KEYS.includes(stored?.read) ? stored.read : DEFAULT_KEYS.read;
   const write = stored?.write;
@@ -106,6 +107,6 @@ export function checkedKeys(stored, platform) {
     MODIFIERS.every((modifier) => typeof write[modifier] === 'boolean') &&
     typeof write.code === 'string';
   if (!wellFormed) return { read, write: DEFAULT_KEYS.write };
-  const shortcut = Object.fromEntries([...MODIFIERS, 'code'].map((field) => [field, write[field]]));
+  const shortcut = /** @type {SpotSlate.Shortcut} */ (Object.fromEntries([...MODIFIERS, 'code'].map((field) => [field, write[field]])));
   return { read, write: shortcutProblem(shortcut, platform) ? DEFAULT_KEYS.write : shortcut };
 }

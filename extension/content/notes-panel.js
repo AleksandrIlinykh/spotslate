@@ -70,6 +70,7 @@
   // `site` is for extension pages, which are not on the site (the toolbar popup); content scripts leave it out and
   // background uses their tab's. `providerName` goes into the note; `lang` is the language it speaks, the one the user
   // translates into. The panel starts closed.
+  /** @type {SpotSlate['createNotesPanel']} */
   function createNotesPanel({ site: claimedSite = null, providerName = '', lang: startLang = 'en' } = {}) {
     const { t } = globalThis.spotslate;
     const panel = element('div', 'notes');
@@ -92,6 +93,7 @@
     let lang = startLang;
     let shown = { text: '', updating: false };
 
+    /** @param {Omit<SpotSlate.Notes, 'site'> & { site?: SpotSlate.Site | null }} notes */
     function show({ site: named, text, updating: busy }) {
       site = named ?? site;
       shown = { text, updating: busy };

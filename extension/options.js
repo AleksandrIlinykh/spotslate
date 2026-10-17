@@ -22,7 +22,7 @@ const FIELDS = ['apiKey', 'model', 'baseUrl'];
 const MODIFIER_KEYS = new Set(['Alt', 'AltGraph', 'Control', 'Shift', 'Meta']);
 const platform = currentPlatform();
 
-const form = document.getElementById('form');
+const form = /** @type {SpotSlate.SettingsForm} */ (document.getElementById('form'));
 const status = document.getElementById('status');
 const element = (id) => document.getElementById(id);
 
@@ -71,7 +71,7 @@ function showProvider(id) {
   form.elements.baseUrl.placeholder = preset.baseUrl || 'https://api.example.com/v1';
   form.querySelector('label[for="apiKey"]').textContent = preset.keyRequired ? 'API key' : 'API key (optional)';
   element('keyHint').hidden = !preset.keyUrl;
-  element('keyLink').href = preset.keyUrl ?? '';
+  /** @type {HTMLAnchorElement} */ (element('keyLink')).href = preset.keyUrl ?? '';
   element('keyLink').textContent = preset.keyUrl ? new URL(preset.keyUrl).host : '';
   element('apiFields').hidden = preset.api === 'browser';
   element('providerHint').hidden = !preset.hint;
@@ -101,9 +101,9 @@ function showModelList() {
 }
 
 const modelField = form.elements.model;
-const modelList = element('modelList');
+const modelList = /** @type {SpotSlate.ModelList} */ (element('modelList'));
 const shownModels = () => [...modelList.children].filter((item) => !item.hidden);
-const activeModel = () => modelList.querySelector('[aria-selected="true"]');
+const activeModel = () => /** @type {HTMLLIElement | null} */ (modelList.querySelector('[aria-selected="true"]'));
 
 // Opens the list with the models that contain `filter`, or with every model and the one in the field marked.
 function openModels(filter = '') {
@@ -179,7 +179,7 @@ form.elements.provider.addEventListener('change', () => {
   report('');
 });
 
-form.addEventListener('input', (event) => {
+form.addEventListener('input', (/** @type {Event & { target: HTMLInputElement }} */ event) => {
   if (FIELDS.includes(event.target.name)) drafts[current][event.target.name] = event.target.value;
   if (event.target.name === 'baseUrl') showDataNote();
   report('');
@@ -215,11 +215,11 @@ modelField.addEventListener('keydown', (event) => {
 });
 
 modelList.addEventListener('mousedown', (event) => event.preventDefault()); // the focus stays in the field
-modelList.addEventListener('click', (event) => {
+modelList.addEventListener('click', (/** @type {MouseEvent & { target: Element }} */ event) => {
   const item = event.target.closest('[role="option"]');
   if (item) pickModel(item);
 });
-modelList.addEventListener('mousemove', (event) => {
+modelList.addEventListener('mousemove', (/** @type {MouseEvent & { target: Element }} */ event) => {
   const item = event.target.closest('[role="option"]');
   if (item && item !== activeModel()) setActiveModel(item);
 });
@@ -234,7 +234,7 @@ element('modelToggle').addEventListener('click', () => {
   openModels();
 });
 
-element('showKey').addEventListener('click', (event) => {
+element('showKey').addEventListener('click', (/** @type {MouseEvent & { target: HTMLButtonElement }} */ event) => {
   const hidden = form.elements.apiKey.type === 'password';
   form.elements.apiKey.type = hidden ? 'text' : 'password';
   event.target.textContent = hidden ? 'Hide' : 'Show';
@@ -357,7 +357,7 @@ function showKeys(keys) {
 
 // The shortcut field records the next shortcut pressed in it; one that types text, or that the browser or the system
 // needs, is refused with the reason and the field keeps the one before.
-form.elements.writeKey.addEventListener('keydown', (event) => {
+form.elements.writeKey.addEventListener('keydown', (/** @type {KeyboardEvent & { currentTarget: HTMLInputElement }} */ event) => {
   const plain = !event.ctrlKey && !event.altKey && !event.metaKey;
   if (event.key === 'Tab' && plain) return; // Tab and Shift+Tab move on
   event.preventDefault();
@@ -452,4 +452,4 @@ chrome.runtime.onMessage.addListener((message) => {
 showSites();
 showToolbarKey();
 show(await loadSettings());
-element('fields').disabled = false;
+/** @type {HTMLFieldSetElement} */ (element('fields')).disabled = false;

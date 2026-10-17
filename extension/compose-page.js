@@ -44,6 +44,8 @@ function siteRow() {
     <p class="site-off"></p>
     <label class="site-option"><input type="checkbox" class="switch small site-ai" role="switch"><span class="ai-label"></span></label>
     <label class="site-option"><input type="checkbox" class="switch small site-context" role="switch"><span class="context-label"></span></label>`;
+  // The switches are inputs; the other parts only get a text or are hidden.
+  /** @type {(name: string) => HTMLInputElement} */
   const part = (name) => row.querySelector(`.${name}`);
   part('site-name').textContent = say('siteSwitch', { site });
   part('site-off').textContent = say('siteOff');

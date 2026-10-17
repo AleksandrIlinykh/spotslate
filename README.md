@@ -124,9 +124,12 @@ After changing the extension files, click "Reload" on its card in `chrome://exte
     npm install
     npx playwright install chromium
     npm test           # unit tests
+    npm run types      # the JavaScript checked against types/spotslate.d.ts
     npm run test:e2e   # e2e: real Chromium with the extension and a mock API
 
-GitHub Actions runs both on every push and pull request (`.github/workflows/test.yml`).
+GitHub Actions runs all three on every push and pull request (`.github/workflows/test.yml`).
+
+How the parts fit together, every message between them and where to look for what: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 For the Chrome Web Store:
 

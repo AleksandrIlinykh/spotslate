@@ -93,8 +93,12 @@ spotslate/
     e2e/                Playwright
     mock-server.js      mock OpenAI-compatible and Anthropic APIs + test pages
     fixtures/           page.html, hostile.html, shadow.html, scroller.html, long.html
-  package.json          dev only: test / test:e2e scripts, devDependency @playwright/test
+  types/
+    spotslate.d.ts      the types of the shared content script object, the messages, the ports and the storage
+  jsconfig.json         type checking of the JavaScript against them, for the editor and `npm run types`
+  package.json          dev only: test / test:e2e / types scripts, devDependencies @playwright/test, typescript, @types/chrome
   playwright.config.js
+  ARCHITECTURE.md       the map: where code runs, the flows, the messages, the storage, where to look
   README.md
 ```
 
@@ -520,7 +524,7 @@ Page-side (content) errors:
 
 ## Testing
 
-GitHub Actions (`.github/workflows/test.yml`) runs both suites on every push and pull request: Node 24 on Ubuntu, `npm ci`, the unit tests, Playwright's Chromium with its system dependencies, then the e2e tests headless. The `test-results/` folder of a failed run is kept for 7 days.
+GitHub Actions (`.github/workflows/test.yml`) runs both suites on every push and pull request: Node 24 on Ubuntu, `npm ci`, the unit tests, the type check (`npm run types`: `tsc` over `jsconfig.json`, not strict, nothing emitted), Playwright's Chromium with its system dependencies, then the e2e tests headless. The `test-results/` folder of a failed run is kept for 7 days.
 
 Unit tests (`node --test`, no dependencies):
 

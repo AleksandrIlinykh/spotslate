@@ -33,8 +33,9 @@ const RETIRED_MODELS = new Set(['deepseek-chat', 'deepseek-reasoner']);
 
 const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
 
+/** @returns {SpotSlate.ProviderEntry} */
 function providerEntry(id, stored) {
-  const entry = Object.fromEntries(PROVIDER_FIELDS.map((field) => [field, trimmed(stored?.[field])]));
+  const entry = /** @type {any} */ (Object.fromEntries(PROVIDER_FIELDS.map((field) => [field, trimmed(stored?.[field])])));
   if (id === 'deepseek' && RETIRED_MODELS.has(entry.model)) entry.model = '';
   return entry;
 }
@@ -54,11 +55,13 @@ export function defaultTargetLang(uiLanguage = browserLanguage()) {
 // keys: { read, write }, companion } (see keys.js; keys refused on `platform` become the defaults).
 // Settings saved before providers existed kept apiKey, model and baseUrl at the top: they become the DeepSeek entry,
 // and DeepSeek stays in use.
+/** @returns {SpotSlate.Settings} */
 export function withDefaults(stored, platform = currentPlatform(), uiLanguage = browserLanguage()) {
   const old = !stored?.providers && PROVIDER_FIELDS.some((field) => trimmed(stored?.[field]));
   const provider = old ? 'deepseek' : trimmed(stored?.provider);
   const targetLang = trimmed(stored?.targetLang);
   const entries = old ? { deepseek: stored } : stored?.providers && typeof stored.providers === 'object' ? stored.providers : {};
+  /** @type {Record<string, SpotSlate.ProviderEntry>} */
   const providers = {};
   for (const [id, entry] of Object.entries(entries)) {
     if (Object.hasOwn(PROVIDERS, id)) providers[id] = providerEntry(id, entry);
@@ -73,6 +76,10 @@ export function withDefaults(stored, platform = currentPlatform(), uiLanguage = 
 }
 
 // The provider in use, with its key and the model and URL to call.
+/**
+ * @param {SpotSlate.Settings} settings
+ * @returns {SpotSlate.Provider}
+ */
 export function activeProvider(settings) {
   const id = settings.provider;
   const entry = settings.providers[id] ?? providerEntry(id);

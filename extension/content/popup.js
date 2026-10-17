@@ -130,6 +130,7 @@
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
   // The six dots that say "drag me", for the title rows of the windows that can be moved (dimmed by `.grip` rules).
+  /** @type {SpotSlate['createGrip']} */
   function createGrip() {
     const grip = document.createElement('span');
     grip.className = 'grip';
@@ -154,6 +155,7 @@
   // With an AI provider a footer row has the Context button, which opens the site context panel under the popup.
   // onReport() is called when the user reports a bad translation; it gets the popup's text.
   // `onTargetChange(lang)` follows a choice of another language to translate into in the title bar.
+  /** @type {SpotSlate['createPopup']} */
   function createPopup({ onOpenSettings, onRetry, onDownload, onClose, onReport, onTargetChange }) {
     const { createNotesPanel, NOTES_CSS, PICKER_CSS, STRINGS, createLanguagePicker, languageName, t } = globalThis.spotslate;
     const host = document.createElement('div');

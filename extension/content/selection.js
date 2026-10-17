@@ -14,6 +14,7 @@
   // The user's text selection when the point is over it, as { target: Range, text, selection: true }; or, in the
   // focused text field, which keeps its selection apart from the page's, { target: field, text, selection: true,
   // field: true } when the point is over the field.
+  /** @type {SpotSlate['selectionAt']} */
   function selectionAt(x, y) {
     return fieldSelectionAt(x, y) ?? pageSelectionAt(x, y);
   }
@@ -43,12 +44,14 @@
   }
 
   // A word or a few: worth a dictionary entry rather than a plain translation.
+  /** @type {SpotSlate['isShortPhrase']} */
   function isShortPhrase(text) {
     return text.length <= SHORT_CHARS && text.split(/\s+/).length <= SHORT_WORDS;
   }
 
   // The phrase at [start, end) of `text` with at most CONTEXT_WORDS words on each side from its own sentence,
   // on one line; '' when there are no other words around it.
+  /** @type {SpotSlate['wordsAround']} */
   function wordsAround(source, start, end) {
     // Line breaks in a block's text come from the HTML source, not from the author: they end no sentence.
     const text = source.replace(/\s/g, ' ');
@@ -70,6 +73,7 @@
   }
 
   // The whole text of the block a selection is in; '' when it spans blocks.
+  /** @type {SpotSlate['blockTextOf']} */
   function blockTextOf(range) {
     const block = globalThis.spotslate.inspectBlock(range.startContainer)?.target;
     if (!(block instanceof Element) || !block.contains(range.endContainer)) return '';
@@ -77,6 +81,7 @@
   }
 
   // The words around a selected phrase, from the text of its block.
+  /** @type {SpotSlate['contextOf']} */
   function contextOf(range) {
     const block = globalThis.spotslate.inspectBlock(range.startContainer)?.target;
     if (!(block instanceof Element) || !block.contains(range.endContainer)) return '';

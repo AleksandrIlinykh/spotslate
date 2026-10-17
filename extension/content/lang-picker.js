@@ -58,6 +58,7 @@
   // `codes` are the languages in order, `value` the chosen one. `label()` names the picker and `titleOf(code)` the
   // language in the window's own language, for assistive technology and the tooltip. `onChange(code)` follows a
   // choice of another language, `onOpen()` the list opening.
+  /** @type {SpotSlate['createLanguagePicker']} */
   function createLanguagePicker({ className, codes, value, label, titleOf, onChange = () => {}, onOpen = () => {} }) {
     const element = part('span', `picker ${className}`);
     const button = part('button', 'picker-button');

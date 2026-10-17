@@ -130,6 +130,7 @@
   // `source` the one they write in (their own unless chosen otherwise) and `to` the one to write in;
   // `engine` is 'browser' or 'api'. `site` is for the toolbar popup, which is not on the site. `draggable` shows the
   // grip of a window that can be moved by its title row.
+  /** @type {SpotSlate['createComposer']} */
   function createComposer({
     container,
     styleRoot,

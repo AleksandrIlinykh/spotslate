@@ -5,6 +5,7 @@
   const detections = new Map(); // text -> the detector's guesses, for the last texts it looked at
 
   // True when the detector is confident the text is already in the target language.
+  /** @type {SpotSlate['isAlreadyIn']} */
   function isAlreadyIn(results, targetLang) {
     const top = results?.[0];
     return Boolean(top) && top.confidence >= MIN_CONFIDENCE && top.detectedLanguage.split('-')[0] === targetLang;
@@ -23,6 +24,7 @@
   }
 
   // The detector's guesses for the text, best first; null when the browser can't detect languages.
+  /** @type {SpotSlate['detectLanguage']} */
   async function detectLanguage(text) {
     if (detections.has(text)) return detections.get(text);
     try {
@@ -38,10 +40,12 @@
   }
 
   // What the detector already said about the text, without asking again; null if it has not looked at it.
+  /** @type {SpotSlate['detectedBefore']} */
   function detectedBefore(text) {
     return detections.get(text) ?? null;
   }
 
+  /** @type {SpotSlate['alreadyInLanguage']} */
   async function alreadyInLanguage(text, targetLang) {
     return isAlreadyIn(await detectLanguage(text), targetLang);
   }

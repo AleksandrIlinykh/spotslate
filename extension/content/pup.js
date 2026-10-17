@@ -35,6 +35,7 @@
     const top = { crouch: 3, stand: 2, jump: 1 }[pose];
     const chest = pose === 'crouch' ? 1 : 2;
     const bodyTop = top + 9;
+    /** @type {[SpotSlate.Part, number, number][]} */
     const layers = [[head, 2, top], [body(chest), 5, bodyTop]];
     layers.push(arms === 'left' ? [ARM_UP, 0, top + 4] : [ARM_DOWN, 3, bodyTop]);
     layers.push(arms === 'right' ? [mirror(ARM_UP), 11, top + 4] : [mirror(ARM_DOWN), 10, bodyTop]);

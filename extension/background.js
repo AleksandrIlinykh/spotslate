@@ -62,6 +62,10 @@ chrome.declarativeNetRequest
 // Pages get the public part of the settings: the target language, which engine translates and its name, the keys and
 // the companion.
 // With the free engine (Chrome's translator) the page translates by itself.
+/**
+ * @param {SpotSlate.Settings} settings
+ * @returns {SpotSlate.PageSettings}
+ */
 function pageSettings(settings) {
   const { read, write } = settings.keys;
   return {
@@ -138,7 +142,7 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, sender, sendResponse) => {
   if (message?.type === 'open-options') chrome.runtime.openOptionsPage();
   if (message?.type === 'page-settings') {
     const site = siteOf(sender);
@@ -236,6 +240,7 @@ function stateOf(site) {
   return notesState.get(site);
 }
 
+/** @returns {Promise<string>} */
 async function notesOf(site) {
   if (!site) return '';
   const key = NOTES_PREFIX + site;
@@ -336,6 +341,7 @@ async function countRead(site, lang) {
 }
 
 // What the compose window needs to open: the languages, the engine, the site and its notes, the draft.
+/** @returns {Promise<SpotSlate.ComposeState>} */
 async function composeState(site, pageLang) {
   const settings = await loadSettings();
   const provider = activeProvider(settings);
@@ -387,6 +393,12 @@ async function saveComposeSource(site, lang) {
 
 // A draft into the page's language ('write'), a translation back into the user's own ('check'), or the user's own
 // writing in `to` with its mistakes corrected and explained in the user's language ('correct').
+/**
+ * @param {SpotSlate.ComposeRequest} request
+ * @param {SpotSlate.Site | null} site
+ * @param {AbortSignal} signal
+ * @param {(answer: SpotSlate.PortAnswer) => void} send
+ */
 async function compose({ text, from, to, purpose }, site, signal, send) {
   const draft = typeof text === 'string' ? text.slice(0, MAX_DRAFT) : '';
   if (!draft || !Object.hasOwn(LANGUAGES, from) || !Object.hasOwn(LANGUAGES, to)) return;
@@ -420,6 +432,15 @@ async function compose({ text, from, to, purpose }, site, signal, send) {
   await stream(provider, messages, signal, send, settings.targetLang);
 }
 
+/**
+ * Translates `request` with the provider in the settings, from the cache when it can, and streams the answer to `send`.
+ * `onTranslated` gets the translation and the site's mode, once it is shown.
+ * @param {Omit<SpotSlate.TranslateRequest, 'lang'>} request
+ * @param {SpotSlate.Site | null} site
+ * @param {AbortSignal} signal
+ * @param {(answer: SpotSlate.PortAnswer) => void} send
+ * @param {(translation: string, siteMode: SpotSlate.SiteMode) => void} [onTranslated]
+ */
 async function translate(request, site, signal, send, onTranslated = () => {}) {
   const settings = await loadSettings();
   const provider = activeProvider(settings);

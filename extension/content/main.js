@@ -272,7 +272,7 @@
     }
     port = current;
     let result = '';
-    current.onMessage.addListener((message) => {
+    current.onMessage.addListener((/** @type {SpotSlate.PortAnswer} */ message) => {
       if (port !== current) return;
       if (message.type === 'chunk') {
         result += message.text;
@@ -596,7 +596,7 @@
     true,
   );
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Broadcast} */ message, sender, sendResponse) => {
     if (message?.type === 'compose-context') {
       // The toolbar popup asks for the page's declared language.
       sendResponse({ pageLang: languageCode(document.documentElement.lang) });

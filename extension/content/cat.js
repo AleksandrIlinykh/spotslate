@@ -37,6 +37,7 @@
   // The whole cat, sitting: `paws` lifts the left and the right front paw by that many cells (kneading); `raised` puts
   // the left one up by the face instead, its top that many cells under the top of the head.
   function cat({ head = HEAD, tail = 'up', top = 2, paws = [0, 0], raised = null } = {}) {
+    /** @type {[SpotSlate.Part, number, number][]} */
     const layers = [[TAILS[tail], 11, top + 7], [BODY, 4, top + 9]];
     if (raised === null) layers.push([PAW, 4, 14 - paws[0]]);
     layers.push([PAW, 8, 14 - paws[1]], [head, 2, top]);

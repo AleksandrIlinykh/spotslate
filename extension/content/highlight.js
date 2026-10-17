@@ -65,6 +65,7 @@
 
   // Dashed outline over what Alt + hover is about to translate (muted, with a hint, when it can't be), and, while a
   // translation popup is open, over its text, with a dashed line to the popup: the eye keeps its place on the page.
+  /** @type {SpotSlate['createHighlight']} */
   function createHighlight() {
     const box = document.createElement('div');
     box.id = ROOT_ID;

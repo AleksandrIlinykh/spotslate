@@ -26,6 +26,7 @@
 
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
+  /** @type {SpotSlate['createComposeWindow']} */
   function createComposeWindow() {
     let host = null;
     let shadow = null; // kept, since a closed root cannot be reached through the host

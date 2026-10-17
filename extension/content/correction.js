@@ -7,6 +7,7 @@
   const WORDS = /\S+\s*/g; // each word with the spaces after it
 
   // { corrected, notes: [line] }; an answer that lost the form is taken as the corrected text, with no notes.
+  /** @type {SpotSlate['parseCorrection']} */
   function parseCorrection(answer) {
     const text = TEXT.exec(answer);
     if (!text) return { corrected: answer.trim(), notes: [] };
@@ -20,6 +21,7 @@
   // The corrected text in parts, [{ type: 'same' | 'removed' | 'added', text }], what was removed before what took
   // its place. Words are compared without the spaces after them, and the same words come as the corrected text has
   // them, so the parts other than 'removed' make up `after`.
+  /** @type {SpotSlate['diffWords']} */
   function diffWords(before, after) {
     const a = before.match(WORDS) ?? [];
     const b = after.match(WORDS) ?? [];
