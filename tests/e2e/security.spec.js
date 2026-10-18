@@ -4,7 +4,7 @@ test.beforeEach(async ({ setSettings }) => {
   await setSettings();
 });
 
-test('a page cannot fake Alt and the mouse to get a translation with the user key', async ({ page, server }) => {
+test('a page cannot fake Alt and the mouse to get a translation with the user key', { tag: '@smoke' }, async ({ page, server }) => {
   await page.goto(`${server.url}/long.html`);
   await page.evaluate(() => {
     const box = document.getElementById('long').getBoundingClientRect();
@@ -34,7 +34,7 @@ test('a fake mouse move cannot redirect a real Alt to another paragraph', async 
 test.describe('the extension as shipped', () => {
   test.use({ extensionPath: EXTENSION_PATH });
 
-  test('keeps the popup, the companion and the compose window closed to the page', async ({ page, server }) => {
+  test('keeps the popup, the companion and the compose window closed to the page', { tag: '@smoke' }, async ({ page, server }) => {
     await page.goto(`${server.url}/long.html`);
     await altHover(page, '#long');
     await expect(page.locator('#spotslate-root')).toHaveCount(1);

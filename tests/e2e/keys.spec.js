@@ -22,7 +22,7 @@ test('the settings show Alt to read and Alt+T to write', async ({ context, exten
   await expect(options.locator('#intro')).toHaveText('Hold Alt and hover over a paragraph to see its translation above it.');
 });
 
-test('new keys work at once on a page that is already open', async ({ page, context, extensionId, server }) => {
+test('new keys work at once on a page that is already open', { tag: '@smoke' }, async ({ page, context, extensionId, server }) => {
   await page.goto(`${server.url}/page.html`);
   const options = await openOptions(context, extensionId);
   await options.locator('#readKey').selectOption('Control');

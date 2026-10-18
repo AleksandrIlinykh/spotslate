@@ -20,7 +20,7 @@ test.describe('with a working key', () => {
     await expect(popupRoot(page)).toHaveCount(0);
   });
 
-  test('leaving the paragraph and the popup closes it', async ({ page }) => {
+  test('leaving the paragraph and the popup closes it', { tag: '@smoke' }, async ({ page }) => {
     await openOn(page, '#p1', P1);
     await page.keyboard.up('Alt');
     await page.mouse.move(5, 700);

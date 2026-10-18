@@ -106,7 +106,7 @@ test.describe('with a working key', () => {
     expect({ dx: Math.round(after.x - box.x), dy: Math.round(after.y - box.y) }).toEqual({ dx: 120, dy: 80 });
   });
 
-  test('dragging the title bar moves the popup and pins it', async ({ page }) => {
+  test('dragging the title bar moves the popup and pins it', { tag: '@smoke' }, async ({ page }) => {
     const before = await popupBox(page).boundingBox();
     await dragBar(page, 200, 150);
     const after = await popupBox(page).boundingBox();
@@ -210,7 +210,7 @@ test.describe('with a working key', () => {
 });
 
 test.describe('errors', () => {
-  test('an API error offers a retry that translates on the second try', async ({ page, server, setSettings }) => {
+  test('an API error offers a retry that translates on the second try', { tag: '@smoke' }, async ({ page, server, setSettings }) => {
     await setSettings({ apiKey: 'flaky' });
     await page.goto(`${server.url}/page.html`);
     await openOn(page, '#p1');

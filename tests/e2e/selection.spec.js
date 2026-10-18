@@ -29,7 +29,7 @@ test.beforeEach(async ({ page, server, setSettings }) => {
   await page.goto(`${server.url}/page.html`);
 });
 
-test('Alt over a selection translates only the selected text', async ({ page, server }) => {
+test('Alt over a selection translates only the selected text', { tag: '@smoke' }, async ({ page, server }) => {
   await altOver(page, await select(page, '#p1', 4, 25));
   await expect(popupText(page)).toHaveText('[RU] quick brown fox jumps');
   const [{ body }] = server.requests;
@@ -64,7 +64,7 @@ async function altClickAt(page, rect) {
   await page.keyboard.up('Alt');
 }
 
-test('a selection inside a form field is translated, and nothing around it is sent', async ({ page, server }) => {
+test('a selection inside a form field is translated, and nothing around it is sent', { tag: '@smoke' }, async ({ page, server }) => {
   await selectInField(page, 'Please review the build logs today', 7, 17);
   await altOver(page, await page.locator('#comment').boundingBox());
   await expect(popupText(page)).toHaveText('[RU] review the');

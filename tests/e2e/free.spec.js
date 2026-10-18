@@ -30,7 +30,7 @@ test.beforeEach(async ({ setSettings }) => {
   await setSettings({ provider: 'chrome', apiKey: '' });
 });
 
-test('the free translator translates on the page and sends nothing anywhere', async ({ page, server }) => {
+test('the free translator translates on the page and sends nothing anywhere', { tag: '@smoke' }, async ({ page, server }) => {
   await page.goto(`${server.url}/long.html`);
   await inContentScript(page, fakeBuiltInAI());
   await altHover(page, '#long');
@@ -41,7 +41,7 @@ test('the free translator translates on the page and sends nothing anywhere', as
   expect((await fakeLog(page)).creates).toEqual([{ sourceLanguage: 'en', targetLanguage: 'ru', activated: false }]);
 });
 
-test('a language pair to download asks for one click, shows the progress, then translates', async ({ page, server }) => {
+test('a language pair to download asks for one click, shows the progress, then translates', { tag: '@smoke' }, async ({ page, server }) => {
   await page.goto(`${server.url}/page.html`);
   await inContentScript(page, fakeBuiltInAI({ availability: 'downloadable', downloadMs: 800 }));
   await altHover(page, '#p1');

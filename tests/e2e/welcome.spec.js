@@ -25,7 +25,7 @@ test('the welcome page says what leaves the computer and links to the privacy po
   );
 });
 
-test('Alt over the practice paragraph on the welcome page translates it', async ({ page, extensionId, setSettings }) => {
+test('Alt over the practice paragraph on the welcome page translates it', { tag: '@smoke' }, async ({ page, extensionId, setSettings }) => {
   await setSettings();
   await page.goto(welcomeUrl(extensionId));
   await moveTo(page, '#practice');

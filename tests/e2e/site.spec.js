@@ -26,7 +26,7 @@ test('the toolbar window starts with a switch for the site, on, naming it', asyn
   await expect(toolbar.locator('.site-context')).toBeChecked();
 });
 
-test('switched off, the site gets nothing from SpotSlate at once, and switched on again it does', async ({ page, context, serviceWorker, extensionId, server }) => {
+test('switched off, the site gets nothing from SpotSlate at once, and switched on again it does', { tag: '@smoke' }, async ({ page, context, serviceWorker, extensionId, server }) => {
   await page.goto(`${server.url}/page.html`);
   const toolbar = await toolbarFor(page, context, serviceWorker, extensionId);
   await toolbar.locator('.site-switch').uncheck();

@@ -127,7 +127,7 @@ test('an unknown mode falls back to a plain translation', async ({ page, server,
   expect(server.requests[0].body.messages[0].content).toContain('professional translator');
 });
 
-test('a repeated translation comes from the session cache, even on another page', async ({ context, page, server, setSettings, extensionId }) => {
+test('a repeated translation comes from the session cache, even on another page', { tag: '@smoke' }, async ({ context, page, server, setSettings, extensionId }) => {
   await setSettings();
   expect(joined(await translateViaPort(page, 'Hello cache'))).toBe('[RU] Hello cache');
   const other = await context.newPage();
@@ -161,7 +161,7 @@ test('the session cache is per provider', async ({ page, server, setSettings }) 
 });
 
 test.describe('other providers', () => {
-  test('Anthropic gets a Messages API request and its text deltas are streamed', async ({ page, server, setSettings }) => {
+  test('Anthropic gets a Messages API request and its text deltas are streamed', { tag: '@smoke' }, async ({ page, server, setSettings }) => {
     await setSettings({ provider: 'anthropic' });
     const messages = await translateViaPort(page, 'Hello');
     expect(joined(messages)).toBe('[RU] Hello');

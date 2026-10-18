@@ -215,11 +215,16 @@ Closing a port cancels the request: background aborts the `fetch`.
 5. The pieces `main.js` uses, as needed: `popup.js`, `composer.js`, `compose-window.js`, `highlight.js`.
 6. The `lib/` modules, when a flow leads there.
 
-The e2e test names read as a list of what SpotSlate does: `npx playwright test --list`. One file or one test runs on its own:
+The e2e test names read as a list of what SpotSlate does: `npx playwright test --list`. Any of them can be watched at work:
 
 ```bash
-npx playwright test tests/e2e/hero.spec.js -g "pup"
+npx playwright test tests/e2e/hero.spec.js -g "pup"            # one file, the tests matching "pup"
+npx playwright test tests/e2e/hero.spec.js -g "pup" --headed   # the same with the browser on screen
+npx playwright test --ui                                       # pick tests, then go through each step
+npm run test:smoke                                             # the key tests, tagged @smoke, under a minute
 ```
+
+A headed test is over in a second or two. `--ui` keeps every step with the page as it was then, so a test can be gone through at any pace; `--trace on` with `npx playwright show-trace` does the same for one run.
 
 The e2e tests (`tests/e2e/`) load a copy of the extension with open shadow roots into Chromium, against a mock API (`tests/mock-server.js`). `tests/e2e/fixtures.js` has the helpers and the stand-ins for Chrome's built-in AI. The unit tests (`tests/unit/`, `npm test`) cover `lib/` and the content scripts that work without a page.
 

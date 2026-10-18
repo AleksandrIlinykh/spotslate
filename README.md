@@ -126,6 +126,7 @@ After changing the extension files, click "Reload" on its card in `chrome://exte
     npm test           # unit tests
     npm run types      # the JavaScript checked against types/spotslate.d.ts
     npm run test:e2e   # e2e: real Chromium with the extension and a mock API
+    npm run test:smoke # the key e2e tests only, under a minute
 
 GitHub Actions runs all three on every push and pull request (`.github/workflows/test.yml`).
 

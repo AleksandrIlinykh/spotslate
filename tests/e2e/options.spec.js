@@ -108,7 +108,7 @@ test('DeepSeek shows its defaults, a key link and its models', async ({ page, ex
   await expect(page.locator('#targetLang option')).toHaveCount(13);
 });
 
-test('each provider keeps its own key, model and URL while switching, and all are saved', async ({ page, extensionId, serviceWorker }) => {
+test('each provider keeps its own key, model and URL while switching, and all are saved', { tag: '@smoke' }, async ({ page, extensionId, serviceWorker }) => {
   await page.goto(optionsUrl(extensionId));
   await page.locator('#targetLang').selectOption('ru');
   await page.locator('#provider').selectOption('deepseek');

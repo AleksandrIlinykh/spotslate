@@ -96,9 +96,10 @@ spotslate/
   types/
     spotslate.d.ts      the types of the shared content script object, the messages, the ports and the storage
   jsconfig.json         type checking of the JavaScript against them, for the editor and `npm run types`
-  package.json          dev only: test / test:e2e / types scripts, devDependencies @playwright/test, typescript, @types/chrome
+  package.json          dev only: test / test:e2e / test:smoke / types scripts, devDependencies @playwright/test, typescript, @types/chrome
   playwright.config.js
   ARCHITECTURE.md       the map: where code runs, the flows, the messages, the storage, where to look
+  CLAUDE.md             for AI coding sessions: the commands and the rules, pointing to the map and this spec
   README.md
 ```
 
@@ -310,7 +311,6 @@ The panel (`createNotesPanel`), opened by a "Context" button (title "What SpotSl
 - With Chrome's translator there is no button and no panel, and the popup has no footer row.
 
 ## Popup
-## Popup
 
 - Host: `<div id="spotslate-root">` in `document.documentElement` with an open Shadow DOM inside. Host styles are inline with `!important` (`all: initial`, `position: absolute`, `display: block`, `z-index: 2147483647`) so site rules like `div { display: none !important }` do not touch it. Content styles go through `adoptedStyleSheets` (site CSP does not block them); the popup DOM is built with `createElement`, no `innerHTML`.
 - Coordinates are document coordinates (block rectangle + scroll), so the popup scrolls with the page. When an inner container (`overflow: auto`) scrolls, the popup moves with its paragraph (a capture-phase `scroll` listener).
@@ -450,7 +450,6 @@ What goes with the draft: with an AI provider, the site context (see "Site conte
 The languages read on a site: background counts the language of every text translated there in mode `text` (`countLanguage`), in `chrome.storage.session` under `langs:{site}` as `{ [lang]: count }`, with no text, until the browser closes. The language is the passage's when Chrome's detector has already looked at it (`detectedBefore`, from the "Already in" check), or the source language Chrome's translator used; pages that translate with Chrome's translator send it with `{ type: 'read-lang', lang }`.
 
 ## Cache
-## Cache
 
 In `content/main.js`: a `Map` from `[mode, text, context]` to translation, at most 100 entries (the oldest is evicted). Only successfully finished translations are stored. The cache is cleared when the settings change (the `settings-changed` message from background).
 
@@ -549,6 +548,7 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
 
 - `mock-server.js` on a random port serves the test pages, `POST /chat/completions`, `POST /messages` (Anthropic's format) and `GET /models` (two chat models, an embedding model and one with a `models/` prefix), with CORS headers and `OPTIONS` handling. The API key selects the behavior: `strict` → 400 for a request that carries a reasoning switch; `bad` → 401, `broke` → 402, `empty` → stream without text, `slow` → one chunk per second, `late` → the first chunk after 1.5 s, `split` → "Hello 👋 world" with the emoji cut between chunks; any other key → `[RU] {text}` in three chunks with pauses. A request that is not streamed (a site context update) is answered after 600 ms with "Notes: " and the first 60 characters of its newest passage (`bad` → 401). Every request is recorded (path, key headers, `Origin`, body, whether the client aborted it), context updates apart from translations.
 - Every test has a browser, a mock server and a profile of its own, so they may run side by side (`fullyParallel`): two at a time in CI, one locally, where the other apps share the processor and parallel browsers slowed each other down into failures (4 at a time halved the run on a quiet machine and failed eleven tests on a busy one). Each test waits up to 10 s for what the extension shows (Playwright's default is 5 s). The rare local failures were a busy machine slowing the whole Chromium down for some seconds, with nothing wrong in the extension: the mock answers in well under 2 s, and the page spends about 3% of a core on an open popup with the pup on it.
+- One or two tests of each feature and the security checks are tagged `@smoke` (`{ tag: '@smoke' }`); `npm run test:smoke` runs those 25 in under a minute, a quick check while changing code. The browser follows Playwright's `headless` option, so `--headed` shows it, and its steps are traced like any other, so `--ui` and `--trace on` let a test be gone through step by step.
 - Settings are set through the extension's service worker (`chrome.storage.local.set`): one provider (DeepSeek unless a test picks another) with `baseUrl` pointing at the mock.
 - Whether the test Chromium has the on-device Translator and LanguageDetector depends on its build and the page (on `http://127.0.0.1` it may, and then its downloads never finish), so tests do not rely on them. Stand-ins are put into the extension's isolated world over CDP (not a user gesture, unlike `page.evaluate`), and the test for a browser without them deletes the real ones there. Playwright's own actions count as user gestures in Chrome, so the stand-in reports activation only within 5 s of a real click.
 - Scenarios:

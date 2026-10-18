@@ -70,7 +70,7 @@ test('the outline follows the mouse to another paragraph', async ({ page }) => {
   await expect.poll(() => outlineOffset(page, '#p2')).toEqual({ left: 3, top: 3, right: 3, bottom: 3 });
 });
 
-test("releasing Alt keeps the outline on the popup's paragraph, joined to the popup by a dashed line", async ({ page }) => {
+test("releasing Alt keeps the outline on the popup's paragraph, joined to the popup by a dashed line", { tag: '@smoke' }, async ({ page }) => {
   await altHover(page, '#p1');
   await expect(popupText(page)).toHaveText(`[RU] ${P1}`);
   await page.keyboard.up('Alt');
@@ -153,7 +153,7 @@ test('empty space between paragraphs shows no outline', async ({ page }) => {
   await expect(outline(page)).toHaveCount(0);
 });
 
-test('text already in the target language opens the popup saying so, with no request', async ({ page, server, setSettings }) => {
+test('text already in the target language opens the popup saying so, with no request', { tag: '@smoke' }, async ({ page, server, setSettings }) => {
   await setSettings({ targetLang: 'en' });
   await inContentScript(page, fakeBuiltInAI({ language: 'en' })); // Chrome's detector, which says English
   await altHover(page, '#p1');

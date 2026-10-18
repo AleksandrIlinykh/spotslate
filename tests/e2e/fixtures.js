@@ -24,9 +24,11 @@ export const test = base.extend({
     await server.close();
   },
   // Hosts under .test lead to the mock server too: sites outside the extension's host permissions, as most real ones are.
-  context: async ({ extensionPath }, use) => {
+  // `headless` is Playwright's own option, so --headed shows the browser.
+  context: async ({ extensionPath, headless }, use) => {
     const context = await chromium.launchPersistentContext('', {
       channel: 'chromium',
+      headless,
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,

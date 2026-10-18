@@ -14,7 +14,7 @@ async function expectNothingAfterAWhile(page, server) {
   expect(server.requests).toHaveLength(0);
 }
 
-test('Alt + hover shows the streamed translation of the paragraph', async ({ page, server }) => {
+test('Alt + hover shows the streamed translation of the paragraph', { tag: '@smoke' }, async ({ page, server }) => {
   await altHover(page, '#p1');
   await expect(popupText(page)).toHaveText(`[RU] ${P1}`);
   expect(server.requests).toHaveLength(1);

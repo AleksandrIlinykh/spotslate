@@ -20,7 +20,7 @@ test.beforeEach(async ({ setSettings }) => {
   await setSettings();
 });
 
-test('a translated paragraph teaches the site context after it is shown, and the next translation carries it', async ({ page, server }) => {
+test('a translated paragraph teaches the site context after it is shown, and the next translation carries it', { tag: '@smoke' }, async ({ page, server }) => {
   await page.goto(`${server.url}/long.html`);
   await translate(page, '#long');
   await expect.poll(() => server.notesRequests.length).toBe(1);

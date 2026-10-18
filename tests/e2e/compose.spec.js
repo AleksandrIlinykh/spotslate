@@ -58,7 +58,7 @@ test.beforeEach(async ({ setSettings }) => {
   await setSettings();
 });
 
-test('Alt+click on a text field opens the compose window from the user language into the page language', async ({ page, server }) => {
+test('Alt+click on a text field opens the compose window from the user language into the page language', { tag: '@smoke' }, async ({ page, server }) => {
   await openOnComment(page, server);
   await expect(part(page, 'source')).toHaveAttribute('data-value', 'ru');
   await expect(part(page, 'source').locator('.picker-button')).toHaveText('RU');
@@ -135,7 +135,7 @@ test('another language does not keep the translation in the one before', async (
   await expect(part(page, 'translation')).toHaveText('…');
 });
 
-test('Ctrl+Enter copies the translation, closes the window and gives the focus back to the field', async ({ page, server, context }) => {
+test('Ctrl+Enter copies the translation, closes the window and gives the focus back to the field', { tag: '@smoke' }, async ({ page, server, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: server.url });
   await openOnComment(page, server);
   await write(page, DRAFT);
@@ -286,7 +286,7 @@ test.describe('the same language on both sides', () => {
     await part(page, 'draft').focus();
   }
 
-  test('checks the draft: the corrections in place, a note on each in the user language, Copy takes the corrected text', async ({ page, server, context }) => {
+  test('checks the draft: the corrections in place, a note on each in the user language, Copy takes the corrected text', { tag: '@smoke' }, async ({ page, server, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: server.url });
     await writeIn(page, server, 'en');
     await expect(part(page, 'draft')).toHaveAttribute('placeholder', say('writeCheckPlaceholder'));
@@ -371,7 +371,7 @@ test.describe('the same language on both sides', () => {
 });
 
 test.describe('the toolbar popup', () => {
-  test('opens the same window with a settings button and translates the draft', async ({ page, extensionId, server, context }) => {
+  test('opens the same window with a settings button and translates the draft', { tag: '@smoke' }, async ({ page, extensionId, server, context }) => {
     await page.goto(`chrome-extension://${extensionId}/compose.html`);
     await expect(page.locator('.source')).toHaveAttribute('data-value', 'ru');
     await expect(page.locator('.target')).toHaveAttribute('data-value', 'en');

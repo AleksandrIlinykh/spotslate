@@ -47,7 +47,7 @@ test('a key combination with Alt brings no pup', async ({ page, server }) => {
   await expect(hero(page)).toHaveCount(0);
 });
 
-test('the pup sits down once the translation is there, and hops onto the popup when Alt is let go', async ({ page, server }) => {
+test('the pup sits down once the translation is there, and hops onto the popup when Alt is let go', { tag: '@smoke' }, async ({ page, server }) => {
   await page.goto(`${server.url}/page.html`);
   await altHover(page, '#p1');
   await expect(popupText(page)).toHaveText('[RU] The quick brown fox jumps over the lazy dog. Read more');
