@@ -6,7 +6,7 @@ Date: 2026-10-12
 
 ## Goal
 
-A Chrome extension for reading sites in a foreign language: hold Alt, hover over a paragraph, and a natural translation into the chosen language pops up above it. Out of the box Chrome's own on-device translator does it, free and without sending anything anywhere. For translations that fit the context, the user picks an AI model instead: a cloud API with their own key or a model running on the same computer. Installed as an unpacked extension.
+A Chrome extension for reading sites in a foreign language: hold Alt, hover over a paragraph, and a natural translation into the chosen language pops up above it. Out of the box Chrome's own on-device translator does it, free and without sending anything anywhere. For translations that fit the context, the user picks an AI model instead: a cloud API with their own key or a model running on the same computer. Published in the Chrome Web Store (`store/listing.md`); testers and developers can also load it unpacked.
 
 ## Success criteria
 
@@ -20,12 +20,11 @@ A Chrome extension for reading sites in a foreign language: hold Alt, hover over
 
 ## Out of scope
 
-- Publishing to the Chrome Web Store, syncing settings across devices.
+- Syncing settings across devices.
 - Translating inside iframes, and translating what is in form fields (`input`, `textarea`, `select`), except what the user selects there. Writing into a field goes through the compose window instead, and the window never puts text into the field: the user copies it.
 - Transcription, usage examples, full dictionary articles (short selections get a brief entry only).
 - Translating the whole page.
 - Sending the page title or whole neighbouring paragraphs to the model (only the words around a selected phrase and the site context are sent, see "Context for the model").
-- A configurable hotkey (Alt only).
 - Firefox, Safari.
 
 ## Approach
@@ -312,7 +311,7 @@ The panel (`createNotesPanel`), opened by a "Context" button (title "What SpotSl
 
 ## Popup
 
-- Host: `<div id="spotslate-root">` in `document.documentElement` with an open Shadow DOM inside. Host styles are inline with `!important` (`all: initial`, `position: absolute`, `display: block`, `z-index: 2147483647`) so site rules like `div { display: none !important }` do not touch it. Content styles go through `adoptedStyleSheets` (site CSP does not block them); the popup DOM is built with `createElement`, no `innerHTML`.
+- Host: `<div id="spotslate-root">` in `document.documentElement` with a closed Shadow DOM inside (`SHADOW_MODE` in `content/config.js`; the e2e tests' copy opens it). Host styles are inline with `!important` (`all: initial`, `position: absolute`, `display: block`, `z-index: 2147483647`) so site rules like `div { display: none !important }` do not touch it. Content styles go through `adoptedStyleSheets` (site CSP does not block them); the popup DOM is built with `createElement`, no `innerHTML`.
 - Coordinates are document coordinates (block rectangle + scroll), so the popup scrolls with the page. When an inner container (`overflow: auto`) scrolls, the popup moves with its paragraph (a capture-phase `scroll` listener).
 - Width comes from the block, not from the text, and is set before the popup is first drawn: `clamp(block width, 320, 720)` px, no wider than the window minus 16 px (beside a tall block, no wider than the room on its right). So the popup does not grow while the translation streams in, and the context panel under it is as wide from the start; a short translation sits in a popup of the same width. So a wide paragraph gets a 720 px popup (lines stay readable), a regular paragraph gets a popup of its own width (lines run in parallel with the source), and a narrow column gets 320 px (the translation ends up shorter than the source, not a tall ribbon).
 - **Horizontal:** left edge = paragraph's left edge + 32 px, adjusted so the popup does not leave the window (8 px from the edges).
@@ -710,4 +709,4 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   157. The settings page is in blocks with titles (Translation, Keys, Companion, Sites); the companions move in their tiles, Spot chosen; a hovered one dances; one picked by a click or the arrow keys is saved, and so is none.
   158. Save stays in the window while the page scrolls.
 
-Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.
+Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.
