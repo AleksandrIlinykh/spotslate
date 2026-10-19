@@ -6,6 +6,15 @@ import { inert, notesBlock } from './notes.js';
 // turn is exactly the text. What changes least comes first, so the providers' prefix caches can reuse it.
 export const REFERENCE_REPLY = 'Understood. I will use it only as reference.';
 
+// The learning mode shows this after a translation (a sentence) or a dictionary word, unless the user writes their own
+// in the settings. SpotSlate keeps the mechanics (the translation first, the '---' line, the dictionary's first line);
+// this says only what the lesson holds.
+export const DEFAULT_LEARNING_PROMPT =
+  'A grammar breakdown. For a word: its part of speech and base form, its forms ' +
+  '(gender, number and cases for a noun; key tenses for a verb; degrees for an adjective), ' +
+  'and two example sentences in the source language. For a sentence: the roles of the key words ' +
+  'and notable grammar (tense, voice, mood, unusual word order).';
+
 export function referenceTurns(parts) {
   if (parts.length === 0) return [];
   return [
@@ -17,20 +26,19 @@ export function referenceTurns(parts) {
   ];
 }
 
-export function buildMessages(text, languageName, { mode = 'text', context = '', notes = '', learning = false } = {}) {
+export function buildMessages(text, languageName, { mode = 'text', context = '', notes = '', learning = false, learningPrompt = '' } = {}) {
   const withContext = mode === 'dictionary' && Boolean(context);
-  // The learning mode turns each entry into a short lesson: a dictionary word gains its forms and an example, and a
-  // translated sentence gains a grammar breakdown after a '---' line, so the translation still streams in first.
+  // The learning mode turns each entry into a short lesson. SpotSlate keeps the mechanics (the translation first, the
+  // '---' line, the dictionary's first line); `lesson` is what the lesson holds, the user's own instruction or the
+  // default. The translation still streams in first, so it shows at once and the lesson follows.
+  const lesson = learning ? learningPrompt.trim() || DEFAULT_LEARNING_PROMPT : '';
   const dictionaryEntry =
     "You are a bilingual dictionary. The user's text is a word or a short phrase. " +
     `Reply in ${languageName}, in plain text only: on the first line give ` +
     (withContext ? 'the translation that fits the sentence it is from, given as reference' : 'the most common translation') +
-    '; then add up to three lines, one per sense, each as "part of speech: meanings", most common first. ' +
     (learning
-      ? 'Then add the dictionary form and part of speech, a line of its main forms (a verb its key tenses, a noun its ' +
-        'gender, number and cases, an adjective its degrees), and one example sentence in the source language. ' +
-        `Label each of these in ${languageName}.`
-      : 'Add nothing else.');
+      ? `. Then, in ${languageName}: ${lesson}`
+      : '; then add up to three lines, one per sense, each as "part of speech: meanings", most common first. Add nothing else.');
   const translator =
     `You are a professional translator. Translate the user's text into ${languageName}. ` +
     'Output only the translation, with no explanations, notes, or quotes. ' +
@@ -39,9 +47,7 @@ export function buildMessages(text, languageName, { mode = 'text', context = '',
     `If the text is already in ${languageName}, return it unchanged.` +
     (learning
       ? ' After the translation, only when the text is a single sentence, add a line containing exactly "---" and ' +
-        `then a short grammar breakdown in ${languageName}: the role of the key words (subject, verb, object) and ` +
-        'notable grammar such as tense, voice, mood or unusual word order, in a few lines. ' +
-        'When the text is longer than one sentence, output only the translation.'
+        `then, in ${languageName}: ${lesson} When the text is longer than one sentence, output only the translation.`
       : '');
   const instructions = mode === 'dictionary' ? dictionaryEntry : translator;
   const reference = [];

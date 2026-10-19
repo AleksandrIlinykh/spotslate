@@ -56,6 +56,8 @@ function show(settings) {
   form.elements.targetLang.value = settings.targetLang;
   form.elements.companion.value = settings.companion;
   form.elements.learning.checked = settings.learning;
+  form.elements.learningPrompt.value = settings.learningPrompt;
+  showLearningFields();
   for (const [id, preset] of Object.entries(PROVIDERS)) {
     const entry = settings.providers[id];
     drafts[id] = { apiKey: entry?.apiKey ?? '', model: entry?.model || preset.model, baseUrl: entry?.baseUrl || preset.baseUrl };
@@ -402,12 +404,19 @@ form.addEventListener('submit', async (event) => {
     keys: { read: form.elements.readKey.value, write: writeShortcut },
     companion: form.elements.companion.value,
     learning: form.elements.learning.checked,
+    learningPrompt: form.elements.learningPrompt.value,
   });
   await chrome.storage.local.set({ settings });
   show(settings);
   report((await allowed) ? 'Saved' : `Saved, but ${notAllowed(provider)}, so requests to it will fail.`);
   if (provider.api === 'browser') await prepareBrowserModel(settings.targetLang);
 });
+
+// The learning instruction is only useful with the mode on, so its field shows then.
+function showLearningFields() {
+  element('learningFields').hidden = !form.elements.learning.checked;
+}
+form.elements.learning.addEventListener('change', showLearningFields);
 
 // Each companion moves in its tile as it does on pages: resting, with its fidgets now and then, and dancing while the
 // mouse or the focus is on the tile.

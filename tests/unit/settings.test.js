@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DEFAULTS, LANGUAGES, activeProvider, defaultTargetLang, withDefaults } from '../../extension/lib/settings.js';
 import { PROVIDERS } from '../../extension/lib/providers.js';
 import { DEFAULT_KEYS } from '../../extension/lib/keys.js';
+import { DEFAULT_LEARNING_PROMPT } from '../../extension/lib/prompt.js';
 
 test('withDefaults returns the free built-in translator, the browser language, no provider entries, the default keys and Spot when nothing is stored', () => {
   assert.deepEqual(withDefaults(undefined, 'win', 'ru-RU'), {
@@ -12,9 +13,10 @@ test('withDefaults returns the free built-in translator, the browser language, n
     keys: DEFAULT_KEYS,
     companion: 'pup',
     learning: false,
+    learningPrompt: DEFAULT_LEARNING_PROMPT,
   });
   assert.equal(withDefaults(undefined, 'win', 'de-AT').targetLang, 'de');
-  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false });
+  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false, learningPrompt: DEFAULT_LEARNING_PROMPT });
 });
 
 test('withDefaults keeps the companion chosen, or none, and brings Spot back for anything else', () => {
@@ -26,6 +28,17 @@ test('withDefaults keeps the learning toggle as a boolean and starts it off', ()
   assert.equal(withDefaults(undefined, 'win', 'en').learning, false);
   assert.equal(withDefaults({ learning: true }, 'win', 'en').learning, true);
   for (const bad of ['yes', 1, null, {}]) assert.equal(withDefaults({ learning: bad }, 'win', 'en').learning, false);
+});
+
+test('withDefaults fills the learning instruction with the default and trims a custom one', () => {
+  assert.equal(withDefaults(undefined, 'win', 'en').learningPrompt, DEFAULT_LEARNING_PROMPT);
+  assert.equal(withDefaults({ learningPrompt: '  show the gender\n' }, 'win', 'en').learningPrompt, 'show the gender');
+  assert.equal(withDefaults({ learningPrompt: '   ' }, 'win', 'en').learningPrompt, DEFAULT_LEARNING_PROMPT);
+  assert.equal(withDefaults({ learningPrompt: 42 }, 'win', 'en').learningPrompt, DEFAULT_LEARNING_PROMPT);
+});
+
+test('withDefaults caps a very long learning instruction', () => {
+  assert.equal(withDefaults({ learningPrompt: 'x'.repeat(2000) }).learningPrompt.length, 1000);
 });
 
 test('withDefaults drops the agreement field of older settings', () => {
@@ -59,6 +72,7 @@ test('withDefaults keeps the chosen provider and every provider entry, trimmed',
     keys: DEFAULT_KEYS,
     companion: 'pup',
     learning: false,
+    learningPrompt: DEFAULT_LEARNING_PROMPT,
   });
 });
 
@@ -71,6 +85,7 @@ test('withDefaults drops unknown providers, unknown fields and non-string values
     keys: DEFAULT_KEYS,
     companion: 'pup',
     learning: false,
+    learningPrompt: DEFAULT_LEARNING_PROMPT,
   });
 });
 
@@ -87,6 +102,7 @@ test('settings saved before providers existed become the DeepSeek entry', () => 
     keys: DEFAULT_KEYS,
     companion: 'pup',
     learning: false,
+    learningPrompt: DEFAULT_LEARNING_PROMPT,
   });
 });
 

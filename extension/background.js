@@ -445,8 +445,10 @@ async function compose({ text, from, to, purpose }, site, signal, send) {
  */
 async function translate(request, site, signal, send, onTranslated = () => {}) {
   const settings = await loadSettings();
-  // The setting is authoritative: a page cannot ask for a breakdown the user turned off.
-  request = { ...request, learning: Boolean(request.learning) && settings.learning };
+  // The setting is authoritative: a page cannot ask for a breakdown the user turned off, and the instruction that
+  // shapes it comes from the settings, never from the page.
+  const learning = Boolean(request.learning) && settings.learning;
+  request = { ...request, learning, learningPrompt: learning ? settings.learningPrompt : '' };
   const provider = activeProvider(settings);
   if (provider.api === 'browser') {
     // The page did not hear about the switch to the free translator yet; the message is on its way.
@@ -525,8 +527,8 @@ async function stream(provider, messages, signal, send, lang) {
 
 // Translations are shared by all tabs for the browser session (chrome.storage.session). The notes are left out:
 // a text translated once is reused while they grow.
-async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, learning }) {
-  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, learning]));
+async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, learning, learningPrompt = '' }) {
+  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, learning, learningPrompt]));
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
   return CACHE_PREFIX + Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

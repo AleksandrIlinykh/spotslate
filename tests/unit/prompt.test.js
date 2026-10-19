@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REFERENCE_REPLY, buildMessages } from '../../extension/lib/prompt.js';
+import { DEFAULT_LEARNING_PROMPT, REFERENCE_REPLY, buildMessages } from '../../extension/lib/prompt.js';
 import { notesBlock } from '../../extension/lib/notes.js';
 
 test('buildMessages puts the language into the system prompt and the text into the user message', () => {
@@ -46,6 +46,24 @@ test('buildMessages in learning mode gives a richer dictionary entry with forms 
   assert.match(system.content, /bilingual dictionary/);
   assert.match(system.content, /forms/i);
   assert.match(system.content, /example/i);
+});
+
+test('buildMessages uses a custom learning instruction in place of the default', () => {
+  const [system] = buildMessages('warten', 'Russian', { mode: 'dictionary', learning: true, learningPrompt: 'only the gender and the plural' });
+  assert.match(system.content, /only the gender and the plural/);
+  assert.doesNotMatch(system.content, /part of speech and base form/); // the default is gone
+});
+
+test('buildMessages falls back to the default learning instruction when the field is blank', () => {
+  const blank = buildMessages('x', 'German', { learning: true, learningPrompt: '   ' });
+  const none = buildMessages('x', 'German', { learning: true });
+  assert.deepEqual(blank, none);
+  assert.ok(DEFAULT_LEARNING_PROMPT.length > 0);
+  assert.match(none[0].content, new RegExp(DEFAULT_LEARNING_PROMPT.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('buildMessages ignores the learning instruction when learning is off', () => {
+  assert.deepEqual(buildMessages('x', 'German', { learningPrompt: 'show the gender' }), buildMessages('x', 'German'));
 });
 
 test('buildMessages without learning keeps the plain prompts', () => {

@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures.js';
 import { DEFAULT_KEYS } from '../../extension/lib/keys.js';
 import { LANGUAGES } from '../../extension/lib/settings.js';
+import { DEFAULT_LEARNING_PROMPT } from '../../extension/lib/prompt.js';
 
 const optionsUrl = (extensionId) => `chrome-extension://${extensionId}/options.html`;
 const stored = async (serviceWorker) => (await serviceWorker.evaluate(() => chrome.storage.local.get('settings'))).settings;
@@ -133,6 +134,7 @@ test('each provider keeps its own key, model and URL while switching, and all ar
     keys: DEFAULT_KEYS,
     companion: 'pup',
     learning: false,
+    learningPrompt: DEFAULT_LEARNING_PROMPT,
   });
 });
 
@@ -154,16 +156,32 @@ test('saves trimmed values, and a blank model or URL means the default', async (
     keys: DEFAULT_KEYS,
     companion: 'pup',
     learning: false,
+    learningPrompt: DEFAULT_LEARNING_PROMPT,
   });
 });
 
 test('saves the learning mode, off by default and kept when turned on', async ({ page, extensionId, serviceWorker }) => {
   await page.goto(optionsUrl(extensionId));
   await expect(page.locator('#learning')).not.toBeChecked();
+  await expect(page.locator('#learningFields')).toBeHidden();
   await page.locator('#learning').check();
+  await expect(page.locator('#learningFields')).toBeVisible();
+  await expect(page.locator('#learningPrompt')).toHaveValue(/grammar breakdown/);
   await save(page);
   await expect(page.locator('#status')).toHaveText('Saved');
   expect((await stored(serviceWorker)).learning).toBe(true);
+});
+
+test('a custom learning instruction is saved, and a blank one goes back to the default', async ({ page, extensionId, serviceWorker }) => {
+  await page.goto(optionsUrl(extensionId));
+  await page.locator('#learning').check();
+  await page.locator('#learningPrompt').fill('  only the gender and the plural  ');
+  await save(page);
+  expect((await stored(serviceWorker)).learningPrompt).toBe('only the gender and the plural');
+  await page.locator('#learningPrompt').fill('   ');
+  await save(page);
+  expect((await stored(serviceWorker)).learningPrompt).toMatch(/grammar breakdown/);
+  await expect(page.locator('#learningPrompt')).toHaveValue(/grammar breakdown/);
 });
 
 test('shows saved values when opened again', async ({ page, extensionId, server, setSettings }) => {

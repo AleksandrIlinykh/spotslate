@@ -53,6 +53,17 @@ test('in learning mode a selected sentence gets a grammar breakdown after the tr
   expect(server.requests[0].body.messages[0].content).toContain('breakdown');
 });
 
+test('a custom learning instruction is used in the request, and the breakdown still follows the translation', async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true, learningPrompt: 'only the gender and the plural' });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 0, 44));
+  await expect(popupText(page)).toContainText('[RU] The quick brown fox jumps over the lazy dog.');
+  await expect(popupText(page)).toContainText('---');
+  const [{ body }] = server.requests;
+  expect(body.messages[0].content).toContain('only the gender and the plural');
+  expect(body.messages[0].content).not.toContain('part of speech and base form'); // the default is replaced
+});
+
 test('in learning mode a selected word gets its forms and an example', async ({ page, server, setSettings }) => {
   await setSettings({ learning: true });
   await page.goto(`${server.url}/page.html`);

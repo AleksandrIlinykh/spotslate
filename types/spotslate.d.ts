@@ -56,6 +56,8 @@ declare namespace SpotSlate {
     companion: Companion;
     /** The learning mode: a grammar breakdown with the translation, and the vocabulary. */
     learning: boolean;
+    /** What the learning breakdown should hold: the user's own instruction, or the default. */
+    learningPrompt: string;
   }
 
   /** A preset of lib/providers.js, by its id in `PROVIDERS`. */
@@ -130,6 +132,7 @@ declare namespace SpotSlate {
       writeKey: HTMLInputElement;
       companion: RadioNodeList;
       learning: HTMLInputElement;
+      learningPrompt: HTMLTextAreaElement;
     };
   }
 
@@ -214,6 +217,8 @@ declare namespace SpotSlate {
     context: string;
     /** Add a grammar breakdown: the learning mode, for a selected word or sentence. */
     learning: boolean;
+    /** What the breakdown holds; set by background from the settings, never by the page. */
+    learningPrompt?: string;
     /** The text's language, if the detector looked at it. */
     lang: Lang | null;
   }

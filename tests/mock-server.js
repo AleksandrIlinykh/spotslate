@@ -162,7 +162,7 @@ async function completions(req, res, { requests, notesRequests }, state, api) {
   const system = String(record.body.system ?? record.body.messages[0].content);
   if (!isCorrection(record.body) && /add a line containing exactly "---"/.test(system)) {
     translation += `\n---\nParts: subject, verb`;
-  } else if (/example sentence in the source language/.test(system)) {
+  } else if (/bilingual dictionary/.test(system) && !/Add nothing else\./.test(system)) {
     translation += `\nForms: ${text}, ${text}s\nExample: ${text} here`;
   }
   const size = Math.ceil(translation.length / 3);
