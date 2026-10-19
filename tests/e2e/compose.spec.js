@@ -464,6 +464,12 @@ test.describe('the toolbar popup', () => {
     const [options] = await Promise.all([context.waitForEvent('page'), page.locator('.settings').click()]);
     await expect(options).toHaveURL(`chrome-extension://${extensionId}/options.html`);
   });
+
+  test('has a button that opens the PDF reader in a new tab', async ({ page, extensionId, context }) => {
+    await page.goto(`chrome-extension://${extensionId}/compose.html`);
+    const [reader] = await Promise.all([context.waitForEvent('page'), page.locator('.read-pdf').click()]);
+    await expect(reader).toHaveURL(`chrome-extension://${extensionId}/pdf.html`);
+  });
 });
 
 test.describe('Alt+T', () => {

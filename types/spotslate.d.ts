@@ -369,6 +369,8 @@ declare namespace SpotSlate {
     engine: Engine;
     notesContainer?: HTMLElement | ShadowRoot;
     showSettings?: boolean;
+    /** Shows a button that opens SpotSlate's PDF reader (the toolbar popup only). */
+    showPdf?: boolean;
     showClose?: boolean;
     /** Shows the grip of a window that can be moved by its title row. */
     draggable?: boolean;
@@ -379,6 +381,7 @@ declare namespace SpotSlate {
     onCopied?(text: string): void;
     onClose?(): void;
     onOpenSettings?(): void;
+    onOpenPdf?(): void;
   }
 
   /** The compose window's content (content/composer.js): used on pages and in the toolbar window. */

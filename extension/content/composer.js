@@ -151,6 +151,7 @@
     site = null,
     notesContainer = container,
     showSettings = false,
+    showPdf = false,
     showClose = false,
     draggable = false,
     onSourceChange = () => {},
@@ -159,6 +160,7 @@
     onCopied = () => {},
     onClose = () => {},
     onOpenSettings = () => {},
+    onOpenPdf = () => {},
   }) {
     const { createNotesPanel, NOTES_CSS, PICKER_CSS, createLanguagePicker, t, languageName } = globalThis.spotslate;
     const ui = from; // the window speaks the user's own language
@@ -190,6 +192,14 @@
     });
     if (draggable) head.append(globalThis.spotslate.createGrip());
     head.append(source.element, element('span', 'arrow', '→'), target.element, element('span', 'spacer'));
+    if (showPdf) {
+      const readPdf = element('button', 'tool read-pdf', '📄');
+      readPdf.type = 'button';
+      readPdf.title = say('readPdf');
+      readPdf.setAttribute('aria-label', say('readPdf'));
+      readPdf.addEventListener('click', () => onOpenPdf());
+      head.append(readPdf);
+    }
     if (showSettings) {
       const settings = element('button', 'tool settings', '⚙');
       settings.type = 'button';
