@@ -2,7 +2,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect, popupText } from './fixtures.js';
 
-const SAMPLE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures/sample.pdf');
+const dir = path.dirname(fileURLToPath(import.meta.url));
+const SAMPLE = path.resolve(dir, '../fixtures/sample.pdf');
+const PARAGRAPHS = path.resolve(dir, '../fixtures/paragraphs.pdf');
 const pdfUrl = (extensionId) => `chrome-extension://${extensionId}/pdf.html`;
 
 // Opens the sample PDF in SpotSlate's reader and waits for its text layer.
@@ -42,4 +44,33 @@ test('selecting text in the PDF and holding Alt translates it', { tag: '@smoke' 
   await expect(popupText(page)).toContainText('[RU]');
   await expect(popupText(page)).toContainText('Schritt');
   expect(server.requests.length).toBeGreaterThan(0);
+});
+
+// Hovers over the span that holds `word` and presses Alt, with no selection.
+async function altOverSpan(page, word) {
+  const box = await page.locator('.textLayer span', { hasText: word }).first().boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 3 });
+  await page.keyboard.down('Alt');
+}
+
+async function openParagraphs(page, extensionId) {
+  await page.goto(pdfUrl(extensionId));
+  await page.locator('#file').setInputFiles(PARAGRAPHS);
+  await expect(page.locator('.textLayer span').first()).toBeVisible();
+}
+
+test('Alt over a paragraph in the PDF translates the whole paragraph, both its lines', { tag: '@smoke' }, async ({ page, extensionId }) => {
+  await openParagraphs(page, extensionId);
+  await altOverSpan(page, 'vorne'); // the first paragraph: "...nach vorne." and "Ein kleiner Schritt."
+  await expect(popupText(page)).toContainText('vorne');
+  await expect(popupText(page)).toContainText('kleiner');
+  await expect(popupText(page)).not.toContainText('Delta'); // not the neighbour, not the whole page
+});
+
+test('Alt over the other paragraph translates that one, not the first', async ({ page, extensionId }) => {
+  await openParagraphs(page, extensionId);
+  await altOverSpan(page, 'Zweiter'); // the second paragraph: "Zweiter Absatz Delta." and "Noch eine Zeile Delta."
+  await expect(popupText(page)).toContainText('Zweiter');
+  await expect(popupText(page)).toContainText('Noch');
+  await expect(popupText(page)).not.toContainText('vorne');
 });

@@ -32,6 +32,12 @@
     if (!(node instanceof Element)) return null;
     const field = node.closest('input, textarea, select');
     if (field) return { target: field, reason: 'editable' };
+    // A page can mark the block to translate (the PDF reader groups a paragraph's lines under one such element).
+    const marked = node.closest('[data-spotslate-block]');
+    if (marked instanceof HTMLElement) {
+      const text = blockText(marked);
+      if (LETTER.test(text)) return text.length > MAX_CHARS ? { target: marked, reason: 'too-long' } : { target: marked, text };
+    }
     for (; node && node !== document.body && node !== document.documentElement; node = parentOf(node)) {
       if (!(node instanceof HTMLElement)) continue;
       if (!BLOCK_DISPLAYS.has(getComputedStyle(node).display)) continue;
