@@ -19,6 +19,7 @@ const CACHE_PREFIX = 'cache:';
 const LOCAL_ORIGIN_RULE = 1;
 const MAX_DRAFT = 3000;
 const MAX_INSTRUCTION = 200; // a rephrase instruction the user types; their own text, so a length cap is enough
+const MAX_REPORT_COMMENT = 1000; // the user's note on a bad result, carried in the issue URL
 const NOTES_PREFIX = 'notes:'; // + site: the site context, in chrome.storage.session
 const LANGS_PREFIX = 'langs:'; // + site: { [lang]: count } of the texts read there, for the compose window
 const DRAFT_PREFIX = 'draft:'; // + site ('' off any site): the last draft written there, in chrome.storage.session
@@ -174,7 +175,7 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
     const site = siteOf(sender, message.site);
     if (site) clearNotes(site);
   }
-  if (message?.type === 'report') openReport(message.mode === 'dictionary' ? 'a dictionary entry' : 'a paragraph');
+  if (message?.type === 'report') openReport({ mode: message.mode, comment: message.comment });
   if (message?.type === 'read-lang') {
     // A text the page translated by itself, with Chrome's translator: only its language is counted.
     const site = siteOf(sender);
@@ -202,21 +203,32 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
   }
 });
 
-// A new GitHub issue about a bad translation, with the setup filled in: never the text, which may be confidential
-// (the page copies it for the user to paste), the page or the API URL, which may name an internal server.
-async function openReport(what) {
+// What was being translated, for the report's setup line.
+function reportWhat(mode) {
+  if (mode === 'dictionary') return 'a dictionary entry';
+  if (mode === 'compose') return 'your own text';
+  if (mode === 'correction') return 'a correction of your own text';
+  return 'a paragraph';
+}
+
+// A new GitHub issue about a bad translation, with the setup filled in and the user's comment (their own words) in the
+// "what was wrong" field: never the text, which may be confidential (the page copies it for the user to paste), the
+// page or the API URL, which may name an internal server.
+/** @param {{ mode?: string, comment?: string }} report */
+async function openReport({ mode, comment } = {}) {
   const settings = await loadSettings();
   const provider = activeProvider(settings);
   const engine = provider.api === 'browser' ? "Chrome's built-in translator" : `${provider.name}, ${provider.model}`;
   const setup = [
     `SpotSlate ${chrome.runtime.getManifest().version}`,
     engine,
-    `into ${LANGUAGES[settings.targetLang]}, ${what}`,
+    `into ${LANGUAGES[settings.targetLang]}, ${reportWhat(mode)}`,
     navigator.userAgent,
   ].join('\n');
   const url = new URL(`${REPOSITORY}/issues/new`);
   url.searchParams.set('template', 'translation.yml');
   url.searchParams.set('setup', setup);
+  if (comment) url.searchParams.set('wrong', String(comment).slice(0, MAX_REPORT_COMMENT));
   chrome.tabs.create({ url: url.href });
 }
 

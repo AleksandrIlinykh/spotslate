@@ -470,6 +470,32 @@ test.describe('the toolbar popup', () => {
     const [reader] = await Promise.all([context.waitForEvent('page'), page.locator('.read-pdf').click()]);
     await expect(reader).toHaveURL(`chrome-extension://${extensionId}/pdf.html`);
   });
+
+  test('reports a bad translation with a comment: the comment goes to the issue, the text only to the clipboard', async ({ page, extensionId, context, serviceWorker }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await serviceWorker.evaluate(() => {
+      globalThis.openedTabs = [];
+      chrome.tabs.create = async ({ url }) => globalThis.openedTabs.push(url);
+    });
+    await page.goto(`chrome-extension://${extensionId}/compose.html`);
+    await page.locator('.draft').pressSequentially(DRAFT, { delay: 20 });
+    await expect(page.locator('.translation')).toHaveText(`[RU] ${DRAFT}`);
+    await page.locator('.report-toggle').click();
+    await page.locator('.report-comment').fill('wrong tone');
+    await page.locator('.report-send').click();
+    await expect.poll(() => serviceWorker.evaluate(() => globalThis.openedTabs.length)).toBe(1);
+    const [address] = await serviceWorker.evaluate(() => globalThis.openedTabs);
+    const url = new URL(address);
+    expect(url.origin + url.pathname).toBe('https://github.com/AleksandrIlinykh/spotslate/issues/new');
+    expect(url.searchParams.get('template')).toBe('translation.yml');
+    expect(url.searchParams.get('wrong')).toBe('wrong tone');
+    expect(url.searchParams.get('setup')).toContain('SpotSlate 0.1.0');
+    expect(url.searchParams.get('setup')).toContain('your own text');
+    expect(address).not.toContain('privet');
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboard).toContain(DRAFT);
+    expect(clipboard).toContain(`[RU] ${DRAFT}`);
+  });
 });
 
 test.describe('Alt+T', () => {

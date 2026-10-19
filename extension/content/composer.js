@@ -58,6 +58,19 @@
       background: transparent; color: inherit; font: inherit;
     }
     .rephrase-run { flex: none; padding: 2px 9px; font-size: 15px; line-height: 1.2; }
+    .report-toggle {
+      flex: none; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-size: 12px;
+      opacity: 0.7; text-decoration: underline; cursor: pointer;
+    }
+    .report-toggle:hover { opacity: 1; }
+    .report-toggle[hidden] { display: none; }
+    .report { display: flex; align-items: center; gap: 6px; }
+    .report[hidden] { display: none; }
+    .report-comment {
+      flex: 1 1 auto; min-width: 0; padding: 3px 8px; border: 1px solid #d0d7de; border-radius: 6px;
+      background: transparent; color: inherit; font: inherit;
+    }
+    .report-send { flex: none; }
     .foot { display: flex; align-items: center; gap: 8px; }
     .engine { margin-right: auto; font-size: 12px; opacity: 0.7; }
     .button {
@@ -73,7 +86,7 @@
     @keyframes pulse { 50% { opacity: 0.3; } }
     @media (prefers-color-scheme: dark) {
       .composer { background: #161b22; color: #e6edf3; }
-      .draft, .button, .rephrase-input { border-color: #30363d; }
+      .draft, .button, .rephrase-input, .report-comment { border-color: #30363d; }
       .removed { color: #ff7b72; }
       .added { color: #7ee787; background: #033a16; }
       .result { background: #0d1117; }
@@ -161,6 +174,7 @@
     onClose = () => {},
     onOpenSettings = () => {},
     onOpenPdf = () => {},
+    onReport = () => {},
   }) {
     const { createNotesPanel, NOTES_CSS, PICKER_CSS, createLanguagePicker, t, languageName } = globalThis.spotslate;
     const ui = from; // the window speaks the user's own language
@@ -242,7 +256,25 @@
     const copyButton = element('button', 'button copy', say('copy'));
     copyButton.type = 'button';
     copyButton.title = say('copyTitle');
-    foot.append(contextButton, engineEl, actionButton, checkButton, copyButton);
+    // Reporting a bad result: a quiet link that opens a comment field. The text itself is only copied to the clipboard,
+    // for the user to paste into the issue if it is not confidential (see report()); the comment goes to the issue.
+    const reportToggle = element('button', 'report-toggle', say('report'));
+    reportToggle.type = 'button';
+    reportToggle.hidden = true;
+    reportToggle.title = say('reportTitle');
+    reportToggle.setAttribute('aria-expanded', 'false');
+    foot.append(contextButton, reportToggle, engineEl, actionButton, checkButton, copyButton);
+
+    const reportRow = element('div', 'report');
+    reportRow.hidden = true;
+    const reportInput = element('input', 'report-comment');
+    reportInput.type = 'text';
+    reportInput.placeholder = say('reportComment');
+    reportInput.title = say('reportTitle');
+    reportInput.setAttribute('aria-label', say('reportComment'));
+    const reportSend = element('button', 'button report-send', say('reportSend'));
+    reportSend.type = 'button';
+    reportRow.append(reportInput, reportSend);
 
     // Rewriting a finished translation (an AI provider only, not a correction): a field for how to change it and a
     // button to regenerate; empty asks for a different wording.
@@ -259,7 +291,7 @@
     rephraseButton.setAttribute('aria-label', say('rephraseRun'));
     rephraseRow.append(rephraseInput, rephraseButton);
 
-    root.append(head, draftEl, result, rephraseRow, foot);
+    root.append(head, draftEl, result, rephraseRow, foot, reportRow);
     container.append(root);
     notesContainer.append(notesPanel.element);
 
@@ -312,6 +344,9 @@
       checkButton.disabled = !ready;
       // Rephrasing is for a finished translation with an AI provider, never a correction.
       rephraseRow.hidden = !(ready && !checking() && engine !== 'browser');
+      // A result can always be reported; without one there is nothing to report.
+      reportToggle.hidden = !ready;
+      if (!ready) setReportOpen(false);
     }
 
     // The corrected text with what changed from the draft, and a line on each mistake.
@@ -517,6 +552,22 @@
       return done;
     }
 
+    function setReportOpen(open) {
+      reportRow.hidden = !open;
+      reportToggle.setAttribute('aria-expanded', String(open));
+      if (open) reportInput.focus();
+    }
+
+    // Reports the current result: the draft and its result go to the clipboard (they may be confidential, so the user
+    // decides whether to paste them into the issue), and the comment, the user's own words, goes to the issue itself.
+    async function report() {
+      if (!translation) return;
+      await writeClipboard(`${draftEl.value.trim()}\n\n${translation}`);
+      onReport({ comment: reportInput.value.trim(), mode: checking() ? 'correction' : 'compose' });
+      reportInput.value = '';
+      setReportOpen(false);
+    }
+
     function closeWindow() {
       saveDraft();
       destroy();
@@ -566,6 +617,14 @@
       event.preventDefault();
       event.stopPropagation();
       runRephrase();
+    });
+    reportToggle.addEventListener('click', () => setReportOpen(reportRow.hidden));
+    reportSend.addEventListener('click', () => report());
+    reportInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      event.stopPropagation();
+      report();
     });
 
     showEngine();

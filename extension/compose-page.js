@@ -85,6 +85,7 @@ globalThis.spotslate
     showPdf: true,
     onOpenSettings: () => chrome.runtime.openOptionsPage(),
     onOpenPdf: () => chrome.tabs.create({ url: chrome.runtime.getURL('pdf.html') }),
+    onReport: ({ comment, mode }) => send({ type: 'report', mode, comment }),
     onSourceChange: (lang) => send({ type: 'compose-source', site, lang }),
     onTargetChange: (lang) => send({ type: 'compose-target', site, lang }),
     onDraftChange: (draft) => send({ type: 'compose-draft', draft }),

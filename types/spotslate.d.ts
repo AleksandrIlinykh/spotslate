@@ -185,8 +185,8 @@ declare namespace SpotSlate {
     | { type: 'notes'; site?: Site }
     /** Forgets the site's context. From the context panel's Clear. */
     | { type: 'clear-notes'; site?: Site }
-    /** Opens a GitHub issue with the setup (never the text). From the popup's Report. */
-    | { type: 'report'; mode: 'text' | 'dictionary' }
+    /** Opens a GitHub issue with the setup and the user's comment (never the text). From the popup or the composer. */
+    | { type: 'report'; mode: 'text' | 'dictionary' | 'compose' | 'correction'; comment?: string }
     /** The language of a text Chrome's translator translated on the page, counted for the compose window. */
     | { type: 'read-lang'; lang: Lang | null }
     /** Answered with `ComposeState`. From the compose window on a page and the toolbar window. */
@@ -382,6 +382,8 @@ declare namespace SpotSlate {
     onClose?(): void;
     onOpenSettings?(): void;
     onOpenPdf?(): void;
+    /** The user reports a bad result; `mode` says what it was, `comment` is their own note. */
+    onReport?(report: { comment: string; mode: 'compose' | 'correction' }): void;
   }
 
   /** The compose window's content (content/composer.js): used on pages and in the toolbar window. */

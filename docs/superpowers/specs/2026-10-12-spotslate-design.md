@@ -388,7 +388,9 @@ The choice reaches open pages at once (`settings-changed`): the companion there 
 
 ## Reporting a bad translation
 
-"Report" on the popup's title bar copies the text and its translation to the clipboard ("Text copied" for 1.2 s) and asks background (`{ type: 'report', mode }`) to open a new GitHub issue from the form `.github/ISSUE_TEMPLATE/translation.yml`, with its "Setup" field filled in: the SpotSlate version, the engine (Chrome's built-in translator, or the provider and model), the language translated into, a paragraph or a dictionary entry, and the browser's user agent. The issue never gets the text, the page or the API URL (which may name an internal server): the text may be confidential, so the form asks to paste it only if it is not. Nothing is sent until the user submits the form on GitHub.
+"Report" on the popup's title bar copies the text and its translation to the clipboard ("Text copied" for 1.2 s) and asks background (`{ type: 'report', mode }`) to open a new GitHub issue from the form `.github/ISSUE_TEMPLATE/translation.yml`, with its "Setup" field filled in: the SpotSlate version, the engine (Chrome's built-in translator, or the provider and model), the language translated into, what it was (`a paragraph`, `a dictionary entry`, `your own text`, or `a correction of your own text`), and the browser's user agent. The issue never gets the text, the page or the API URL (which may name an internal server): the text may be confidential, so the form asks to paste it only if it is not. Nothing is sent until the user submits the form on GitHub.
+
+The compose window has its own report, for a bad translation or correction of the user's own writing: a quiet "Report" link in the bottom row, shown once a result is ready, opens a comment field ("What went wrong?") and a Send button. Sending copies the draft and the result to the clipboard (same privacy: the confidential text stays off the URL, for the user to paste only if they can) and opens the same GitHub form with the setup, but this time also with the user's comment, their own words, prefilled into the form's "What was wrong" field (`{ type: 'report', mode: 'compose' | 'correction', comment }`; background caps the comment at `MAX_REPORT_COMMENT`). The composer calls `onReport({ comment, mode })`; the toolbar popup and the on-page window forward it to background.
 
 ## Site modes (lib/sites.js)
 
@@ -771,5 +773,6 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   173. Selecting text in the PDF reader and holding Alt translates it, through the same gestures as any page.
   174. Alt over a paragraph in the PDF reader translates the whole paragraph (both its lines), not a single line, the neighbouring paragraph, or the whole page.
   175. The toolbar popup's document button opens the PDF reader (`pdf.html`) in a new tab.
+  176. The compose window's Report link opens a comment field; sending it opens the GitHub issue with the setup and the comment, keeps the text off the URL, and copies the draft and the result to the clipboard.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.
