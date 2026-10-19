@@ -533,7 +533,7 @@
   for (const type of ['focusin', 'focusout']) {
     addEventListener(
       type,
-      (event) => {
+      (/** @type {FocusEvent} */ event) => {
         if (ownsFocusNode(event.target) || ownsFocusNode(event.relatedTarget)) event.stopImmediatePropagation();
       },
       true,
