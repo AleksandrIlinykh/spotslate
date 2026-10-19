@@ -397,7 +397,7 @@ test('a provider picked while the saved settings are still loading is not overwr
 
 test('the settings come in blocks, each with its title', async ({ page, extensionId }) => {
   await page.goto(optionsUrl(extensionId));
-  await expect(page.locator('.card > h2')).toHaveText(['Translation', 'Learning mode', 'Keys', 'Companion', 'Sites']);
+  await expect(page.locator('.card > h2')).toHaveText(['Translation', 'Learning mode', 'Keys', 'Companion', 'Sites', 'Read a PDF']);
   await expect(page.locator('.card').filter({ hasText: 'API key' })).toHaveCount(1); // the provider's fields are in its block
 });
 

@@ -29,10 +29,12 @@ test('every content script the manifest lists exists', () => {
   }
 });
 
-test('the welcome page loads the content scripts in the manifest order, so the gestures work on it', () => {
-  const html = fs.readFileSync(path.join(EXTENSION, 'welcome.html'), 'utf8');
-  const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(([, file]) => file);
-  assert.deepEqual(scripts, manifest.content_scripts[0].js);
+test('the pages that run the gestures load the content scripts in the manifest order', () => {
+  for (const page of ['welcome.html', 'pdf.html']) {
+    const html = fs.readFileSync(path.join(EXTENSION, page), 'utf8');
+    const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(([, file]) => file);
+    assert.deepEqual(scripts, manifest.content_scripts[0].js, page);
+  }
 });
 
 test('the GitHub issue forms the extension opens exist', () => {

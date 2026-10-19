@@ -478,6 +478,14 @@ Under a finished translation, with an AI provider and not while correcting, a ro
 
 The languages read on a site: background counts the language of every text translated there in mode `text` (`countLanguage`), in `chrome.storage.session` under `langs:{site}` as `{ [lang]: count }`, with no text, until the browser closes. The language is the passage's when Chrome's detector has already looked at it (`detectedBefore`, from the "Already in" check), or the source language Chrome's translator used; pages that translate with Chrome's translator send it with `{ type: 'read-lang', lang }`.
 
+## PDF reader (pdf.html, pdf-view.js)
+
+Chrome's built-in PDF viewer renders text through PDFium with no DOM, so SpotSlate's gestures cannot reach it. SpotSlate has its own reader instead: `pdf.html`, an extension page that renders a PDF with pdf.js (vendored in `extension/vendor/pdfjs/`, Apache-2.0: `pdf.min.mjs` and the module worker `pdf.worker.min.mjs`). Each page becomes a `.page` with a canvas and, over it, pdf.js's selectable text layer (`TextLayer`, positioned `<span>`s). The page loads the content scripts in the manifest order, exactly as `welcome.html` does (checked by `tests/unit/manifest.test.js`), so selecting text and holding Alt translates it like on any page; a one-to-three-word selection gets a dictionary entry. Alt over a whole paragraph is not grouped yet (the text layer is per-line), so reading is by selection for now.
+
+- **Local files only.** "Open PDF" opens a file picker; the chosen file is read with `file.arrayBuffer()` (`FileReader`), never fetched or uploaded. No host permission, no remote or SharePoint fetch. The reader is reached from the settings page ("Read a PDF" card, a link to `pdf.html` in a new tab).
+- The vendored worker is a module worker loaded from a packaged file; pdf.js's optional WASM needs `'wasm-unsafe-eval'`, which Chrome's MV3 `extension_pages` CSP already allows. Inline scripts are blocked by that CSP, so `pdf.html` loads `pdf-view.js` as an external module. pdf.js is excluded from the type check (`jsconfig.json`), and its files carry `// @ts-nocheck`.
+- The package grows by about 1.7 MB (pdf.js).
+
 ## Cache
 
 In `content/main.js`: a `Map` from `[mode, text, context]` to translation, at most 100 entries (the oldest is evicted). Only successfully finished translations are stored. The cache is cleared when the settings change (the `settings-changed` message from background).
@@ -756,5 +764,7 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   169. The compose draft can be typed on a page that traps focus to a modal (a document `focusin` listener that pulls focus back): focus events for the window are stopped, so the field keeps focus.
   170. The compose draft keeps focus on a page whose editor refocuses itself when it loses focus (a document `focusout` listener that pulls focus back to the page field): the document-level capture guard stops that focus event.
   171. In the learning mode, each correction note asks for a rule and an example (the `correctionPrompt` default), and a custom correction instruction saved in the settings reaches the request.
+  172. The PDF reader renders a picked local file as a selectable text layer (the file name shows, the text is there).
+  173. Selecting text in the PDF reader and holding Alt translates it, through the same gestures as any page.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

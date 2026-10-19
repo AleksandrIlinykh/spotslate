@@ -12,5 +12,6 @@
     "skipLibCheck": true,
     "moduleDetection": "force"
   },
-  "include": ["extension/**/*.js", "types/*.d.ts"]
+  "include": ["extension/**/*.js", "extension/**/*.mjs", "types/*.d.ts"],
+  "exclude": ["extension/vendor/**"]
 }
