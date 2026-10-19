@@ -103,7 +103,11 @@
       host = document.createElement('div');
       host.id = ROOT_ID;
       host.style.cssText = HOST_STYLE;
-      for (const type of ['keydown', 'keyup', 'keypress']) host.addEventListener(type, (event) => event.stopPropagation());
+      // Keys stay out of the page so site shortcuts do not fire; focus events stay in so a page that traps focus to a
+      // modal (Jira, Confluence) cannot pull it out of the window's fields.
+      for (const type of ['keydown', 'keyup', 'keypress', 'focusin', 'focusout']) {
+        host.addEventListener(type, (event) => event.stopPropagation());
+      }
       shadow = host.attachShadow({ mode: globalThis.spotslate.SHADOW_MODE });
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(FRAME_CSS);

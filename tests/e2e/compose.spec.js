@@ -199,6 +199,31 @@ test('the rephrase row is gone when the window is correcting the user own writin
   await expect(part(page, 'rephrase')).toBeHidden();
 });
 
+// Pages like Jira trap focus into a modal: a focusin listener on the document pulls focus back whenever it lands
+// outside. The compose window is injected outside that area, so its fields must still keep focus.
+async function trapFocus(page) {
+  await page.evaluate(() => {
+    const trap = document.createElement('div');
+    const keeper = document.createElement('input');
+    keeper.id = 'focus-keeper';
+    trap.append(keeper);
+    document.body.append(trap);
+    document.addEventListener('focusin', (event) => {
+      if (!trap.contains(event.target)) keeper.focus();
+    });
+    keeper.focus();
+  });
+}
+
+test('the compose draft can be typed on a page that traps focus to a modal', async ({ page, server }) => {
+  await openOnComment(page, server);
+  await trapFocus(page);
+  await part(page, 'draft').click();
+  await page.keyboard.type(DRAFT);
+  await expect(part(page, 'translation')).toHaveText(`[RU] ${DRAFT}`);
+  expect(await page.locator('#focus-keeper').inputValue()).toBe('');
+});
+
 test('Esc closes the window and the draft comes back next time', async ({ page, server }) => {
   await openOnComment(page, server);
   await write(page, DRAFT);
