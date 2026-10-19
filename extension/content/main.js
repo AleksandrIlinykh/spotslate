@@ -524,6 +524,22 @@
 
   addEventListener('blur', releaseReadKey);
 
+  // Pages like Confluence keep the caret in their editor by refocusing it whenever it loses focus. That reaction rides
+  // a focus event the editor fires, not one of ours, so stopping events at our window's host is not enough: here the
+  // whole document is watched in the capture phase, before the page's own handlers, and any focus event that moves
+  // into or out of our popup or compose window is kept from the page. The focus itself still moves; only the page's
+  // listeners are spared, so they do not pull it back.
+  const ownsFocusNode = (node) => popup.isOwn(node) || composeWindow.isOwn(node);
+  for (const type of ['focusin', 'focusout']) {
+    addEventListener(
+      type,
+      (event) => {
+        if (ownsFocusNode(event.target) || ownsFocusNode(event.relatedTarget)) event.stopImmediatePropagation();
+      },
+      true,
+    );
+  }
+
   addEventListener(
     'scroll',
     () => {

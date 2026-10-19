@@ -223,6 +223,22 @@ test('the compose draft can be typed on a page that traps focus to a modal', asy
   expect(await page.locator('#focus-keeper').inputValue()).toBe('');
 });
 
+// Editors like Confluence keep the caret by refocusing their field whenever it loses focus. The compose window must be
+// able to take and hold focus even then.
+test('the compose draft keeps focus on a page whose editor refocuses itself when it loses focus', async ({ page, server }) => {
+  await page.goto(`${server.url}/page.html`);
+  await page.evaluate(() => {
+    const field = document.getElementById('comment');
+    document.addEventListener('focusout', (event) => {
+      if (event.target === field && event.relatedTarget !== field) field.focus();
+    });
+  });
+  await altClick(page, '#comment');
+  await part(page, 'draft').click();
+  await page.keyboard.type(DRAFT);
+  await expect(part(page, 'translation')).toHaveText(`[RU] ${DRAFT}`);
+});
+
 test('Esc closes the window and the draft comes back next time', async ({ page, server }) => {
   await openOnComment(page, server);
   await write(page, DRAFT);
