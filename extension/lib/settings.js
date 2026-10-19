@@ -1,6 +1,6 @@
 import { PROVIDERS } from './providers.js';
 import { checkedKeys, currentPlatform } from './keys.js';
-import { DEFAULT_LEARNING_PROMPT } from './prompt.js';
+import { DEFAULT_CORRECTION_PROMPT, DEFAULT_LEARNING_PROMPT } from './prompt.js';
 
 // How long a learning instruction the user may save; it is their own text, so a limit is all it needs.
 const MAX_LEARNING_PROMPT = 1000;
@@ -10,6 +10,7 @@ export const DEFAULTS = Object.freeze({
   companion: 'pup',
   learning: false,
   learningPrompt: DEFAULT_LEARNING_PROMPT,
+  correctionPrompt: DEFAULT_CORRECTION_PROMPT,
 });
 
 // The companions to choose from (content/pup.js, cat.js, corgi.js); 'none' in the settings means no companion.
@@ -80,6 +81,7 @@ export function withDefaults(stored, platform = currentPlatform(), uiLanguage = 
     companion: COMPANIONS.includes(stored?.companion) || stored?.companion === 'none' ? stored.companion : DEFAULTS.companion,
     learning: typeof stored?.learning === 'boolean' ? stored.learning : DEFAULTS.learning,
     learningPrompt: trimmed(stored?.learningPrompt).slice(0, MAX_LEARNING_PROMPT) || DEFAULTS.learningPrompt,
+    correctionPrompt: trimmed(stored?.correctionPrompt).slice(0, MAX_LEARNING_PROMPT) || DEFAULTS.correctionPrompt,
   };
 }
 

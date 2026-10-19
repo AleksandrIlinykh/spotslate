@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DEFAULTS, LANGUAGES, activeProvider, defaultTargetLang, withDefaults } from '../../extension/lib/settings.js';
 import { PROVIDERS } from '../../extension/lib/providers.js';
 import { DEFAULT_KEYS } from '../../extension/lib/keys.js';
-import { DEFAULT_LEARNING_PROMPT } from '../../extension/lib/prompt.js';
+import { DEFAULT_CORRECTION_PROMPT, DEFAULT_LEARNING_PROMPT } from '../../extension/lib/prompt.js';
 
 test('withDefaults returns the free built-in translator, the browser language, no provider entries, the default keys and Spot when nothing is stored', () => {
   assert.deepEqual(withDefaults(undefined, 'win', 'ru-RU'), {
@@ -14,9 +14,10 @@ test('withDefaults returns the free built-in translator, the browser language, n
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
   assert.equal(withDefaults(undefined, 'win', 'de-AT').targetLang, 'de');
-  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false, learningPrompt: DEFAULT_LEARNING_PROMPT });
+  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false, learningPrompt: DEFAULT_LEARNING_PROMPT, correctionPrompt: DEFAULT_CORRECTION_PROMPT });
 });
 
 test('withDefaults keeps the companion chosen, or none, and brings Spot back for anything else', () => {
@@ -39,6 +40,13 @@ test('withDefaults fills the learning instruction with the default and trims a c
 
 test('withDefaults caps a very long learning instruction', () => {
   assert.equal(withDefaults({ learningPrompt: 'x'.repeat(2000) }).learningPrompt.length, 1000);
+});
+
+test('withDefaults fills the correction instruction with the default and trims a custom one', () => {
+  assert.equal(withDefaults(undefined, 'win', 'en').correctionPrompt, DEFAULT_CORRECTION_PROMPT);
+  assert.equal(withDefaults({ correctionPrompt: '  only the rule\n' }, 'win', 'en').correctionPrompt, 'only the rule');
+  assert.equal(withDefaults({ correctionPrompt: '   ' }, 'win', 'en').correctionPrompt, DEFAULT_CORRECTION_PROMPT);
+  assert.equal(withDefaults({ correctionPrompt: 'y'.repeat(2000) }).correctionPrompt.length, 1000);
 });
 
 test('withDefaults drops the agreement field of older settings', () => {
@@ -73,6 +81,7 @@ test('withDefaults keeps the chosen provider and every provider entry, trimmed',
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
 
@@ -86,6 +95,7 @@ test('withDefaults drops unknown providers, unknown fields and non-string values
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
 
@@ -103,6 +113,7 @@ test('settings saved before providers existed become the DeepSeek entry', () => 
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
 

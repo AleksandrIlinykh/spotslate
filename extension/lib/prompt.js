@@ -15,6 +15,10 @@ export const DEFAULT_LEARNING_PROMPT =
   'and two example sentences. For a sentence: the roles of the key words ' +
   'and notable grammar (tense, voice, mood, unusual word order).';
 
+// What each correction note holds in the learning mode (the check mode of the compose window); it completes
+// "...for each correction: {this}". The user can replace it in the settings.
+export const DEFAULT_CORRECTION_PROMPT = 'the change, then a short rule for it and one example';
+
 export function referenceTurns(parts) {
   if (parts.length === 0) return [];
   return [

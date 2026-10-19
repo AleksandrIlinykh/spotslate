@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures.js';
 import { DEFAULT_KEYS } from '../../extension/lib/keys.js';
 import { LANGUAGES } from '../../extension/lib/settings.js';
-import { DEFAULT_LEARNING_PROMPT } from '../../extension/lib/prompt.js';
+import { DEFAULT_CORRECTION_PROMPT, DEFAULT_LEARNING_PROMPT } from '../../extension/lib/prompt.js';
 
 const optionsUrl = (extensionId) => `chrome-extension://${extensionId}/options.html`;
 const stored = async (serviceWorker) => (await serviceWorker.evaluate(() => chrome.storage.local.get('settings'))).settings;
@@ -135,6 +135,7 @@ test('each provider keeps its own key, model and URL while switching, and all ar
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
 
@@ -157,6 +158,7 @@ test('saves trimmed values, and a blank model or URL means the default', async (
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
 
@@ -182,6 +184,18 @@ test('a custom learning instruction is saved, and a blank one goes back to the d
   await save(page);
   expect((await stored(serviceWorker)).learningPrompt).toMatch(/grammar breakdown/);
   await expect(page.locator('#learningPrompt')).toHaveValue(/grammar breakdown/);
+});
+
+test('a custom correction instruction is saved, and a blank one goes back to the default', async ({ page, extensionId, serviceWorker }) => {
+  await page.goto(optionsUrl(extensionId));
+  await page.locator('#learning').check();
+  await expect(page.locator('#correctionPrompt')).toHaveValue(/rule/);
+  await page.locator('#correctionPrompt').fill('  only the grammar rule  ');
+  await save(page);
+  expect((await stored(serviceWorker)).correctionPrompt).toBe('only the grammar rule');
+  await page.locator('#correctionPrompt').fill('   ');
+  await save(page);
+  expect((await stored(serviceWorker)).correctionPrompt).toMatch(/rule for it and one example/);
 });
 
 test('shows saved values when opened again', async ({ page, extensionId, server, setSettings }) => {

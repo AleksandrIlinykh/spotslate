@@ -58,6 +58,8 @@ declare namespace SpotSlate {
     learning: boolean;
     /** What the learning breakdown should hold: the user's own instruction, or the default. */
     learningPrompt: string;
+    /** What each correction note should hold in the learning mode: the user's own instruction, or the default. */
+    correctionPrompt: string;
   }
 
   /** A preset of lib/providers.js, by its id in `PROVIDERS`. */
@@ -133,6 +135,7 @@ declare namespace SpotSlate {
       companion: RadioNodeList;
       learning: HTMLInputElement;
       learningPrompt: HTMLTextAreaElement;
+      correctionPrompt: HTMLTextAreaElement;
     };
   }
 

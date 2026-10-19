@@ -63,6 +63,22 @@ test("the correction prompt asks for the mistakes of a learner's text only, in a
   assert.deepEqual(messages[1], { role: 'user', content: 'Gestern ich habe nach Hause gegangen.' });
 });
 
+test('the correction prompt in learning mode asks for a rule and an example per correction', () => {
+  const [system] = buildCorrectMessages('x', 'German', 'Russian', { learning: true });
+  assert.match(system.content, /for each correction: the change, then a short rule for it and one example/);
+});
+
+test('the correction prompt uses a custom learning instruction when given', () => {
+  const [system] = buildCorrectMessages('x', 'German', 'Russian', { learning: true, correctionPrompt: 'only the grammar rule' });
+  assert.match(system.content, /for each correction: only the grammar rule/);
+  assert.doesNotMatch(system.content, /a short rule for it and one example/);
+});
+
+test('the correction prompt without learning keeps the plain notes', () => {
+  assert.deepEqual(buildCorrectMessages('x', 'German', 'Russian'), buildCorrectMessages('x', 'German', 'Russian', { learning: false }));
+  assert.match(buildCorrectMessages('x', 'German', 'Russian')[0].content, /for each correction: the change and why/);
+});
+
 test('the correction prompt gives the site notes as reference, never in the system prompt', () => {
   const [system, reference, reply, user] = buildCorrectMessages('Der Build ist rot.', 'German', 'Russian', { notes: 'A site about CI.' });
   assert.doesNotMatch(system.content, /A site about CI/);

@@ -380,6 +380,15 @@ test.describe('the same language on both sides', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('the cat sat');
   });
 
+  test('in learning mode each correction note asks for a rule and an example', async ({ page, server, setSettings }) => {
+    await setSettings({ learning: true });
+    await writeIn(page, server, 'en');
+    await write(page, MISTAKE);
+    await expect(part(page, 'fixes')).toContainText('teh');
+    const request = server.requests.at(-1);
+    expect(systemOf(request)).toContain('for each correction: the change, then a short rule for it and one example');
+  });
+
   test('says when there are no mistakes, and Check translates the text back into the user language', async ({ page, server }) => {
     await writeIn(page, server, 'en');
     await write(page, 'the cat sat');

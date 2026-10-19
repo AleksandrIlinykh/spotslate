@@ -2,7 +2,7 @@
 // with the same language on both sides, their own text with its mistakes corrected.
 import { LANGUAGES } from './settings.js';
 import { notesBlock } from './notes.js';
-import { referenceTurns } from './prompt.js';
+import { DEFAULT_CORRECTION_PROMPT, referenceTurns } from './prompt.js';
 
 // The prompt for a draft: the instructions, the site notes as reference (see prompt.js), and exactly the draft.
 export function buildComposeMessages(draft, fromName, toName, { notes = '' } = {}) {
@@ -32,14 +32,17 @@ export function buildRephraseMessages(text, toName, instruction, { notes = '' } 
 
 // The prompt for checking a text the user wrote in a language they are learning: the mistakes only, never the style,
 // in the form content/correction.js reads, with the notes in the user's own language (`explainIn`).
-export function buildCorrectMessages(draft, languageName, explainIn, { notes = '' } = {}) {
+export function buildCorrectMessages(draft, languageName, explainIn, { notes = '', learning = false, correctionPrompt = '' } = {}) {
+  // The learning mode deepens each note from "the change and why" to whatever the user asks, by default a rule and an
+  // example. The form stays one line per correction, which content/correction.js reads.
+  const perNote = learning ? correctionPrompt.trim() || DEFAULT_CORRECTION_PROMPT : 'the change and why';
   const instructions =
     `The user is learning ${languageName} and wrote the text in it. ` +
     'Correct only its mistakes: grammar, spelling, punctuation and wrongly used words. ' +
     'Do not rewrite it for style; keep everything else as written, with the line breaks, code, URLs and names. ' +
     'Answer in exactly this form:\n' +
     '<corrected>\nthe whole text, corrected\n</corrected>\n' +
-    `<notes>\n- one short line in ${explainIn} for each correction: the change and why\n</notes>\n` +
+    `<notes>\n- one short line in ${explainIn} for each correction: ${perNote}\n</notes>\n` +
     'With no mistakes, give the text unchanged and leave the notes empty. Output nothing else.';
   const reference = notes ? [notesBlock(notes, 'the site the user is writing on')] : [];
   return [{ role: 'system', content: instructions }, ...referenceTurns(reference), { role: 'user', content: draft }];

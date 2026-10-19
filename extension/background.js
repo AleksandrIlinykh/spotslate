@@ -437,7 +437,11 @@ async function compose({ text, from, to, purpose, instruction }, site, signal, s
   const notes = siteMode.noContext ? '' : await notesOf(site);
   const messages =
     purpose === 'correct'
-      ? buildCorrectMessages(draft, LANGUAGES[to], LANGUAGES[settings.targetLang], { notes })
+      ? buildCorrectMessages(draft, LANGUAGES[to], LANGUAGES[settings.targetLang], {
+          notes,
+          learning: settings.learning,
+          correctionPrompt: settings.correctionPrompt,
+        })
       : buildComposeMessages(draft, LANGUAGES[from], LANGUAGES[to], { notes });
   await stream(provider, messages, signal, send, settings.targetLang);
 }
