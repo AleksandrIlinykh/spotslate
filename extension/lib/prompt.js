@@ -12,7 +12,7 @@ export const REFERENCE_REPLY = 'Understood. I will use it only as reference.';
 export const DEFAULT_LEARNING_PROMPT =
   'A grammar breakdown. For a word: its part of speech and base form, its forms ' +
   '(gender, number and cases for a noun; key tenses for a verb; degrees for an adjective), ' +
-  'and two example sentences in the source language. For a sentence: the roles of the key words ' +
+  'and two example sentences. For a sentence: the roles of the key words ' +
   'and notable grammar (tense, voice, mood, unusual word order).';
 
 export function referenceTurns(parts) {
@@ -32,12 +32,18 @@ export function buildMessages(text, languageName, { mode = 'text', context = '',
   // '---' line, the dictionary's first line); `lesson` is what the lesson holds, the user's own instruction or the
   // default. The translation still streams in first, so it shows at once and the lesson follows.
   const lesson = learning ? learningPrompt.trim() || DEFAULT_LEARNING_PROMPT : '';
+  // The learner is studying the original language, so the breakdown is of the user's own text, never of its
+  // translation: forms and examples stay in the original language, and only the labels and the examples' translation
+  // are in the language the user reads.
+  const keepOriginal =
+    `Keep the forms and any example sentences in the original language, and add a ${languageName} translation in ` +
+    `parentheses after each example; write your labels and explanations in ${languageName}.`;
   const dictionaryEntry =
     "You are a bilingual dictionary. The user's text is a word or a short phrase. " +
     `Reply in ${languageName}, in plain text only: on the first line give ` +
     (withContext ? 'the translation that fits the sentence it is from, given as reference' : 'the most common translation') +
     (learning
-      ? `. Then, in ${languageName}: ${lesson}`
+      ? `. Then analyze the original word (the one the user wrote), not its translation: ${lesson} ${keepOriginal}`
       : '; then add up to three lines, one per sense, each as "part of speech: meanings", most common first. Add nothing else.');
   const translator =
     `You are a professional translator. Translate the user's text into ${languageName}. ` +
@@ -47,7 +53,8 @@ export function buildMessages(text, languageName, { mode = 'text', context = '',
     `If the text is already in ${languageName}, return it unchanged.` +
     (learning
       ? ' After the translation, only when the text is a single sentence, add a line containing exactly "---" and ' +
-        `then, in ${languageName}: ${lesson} When the text is longer than one sentence, output only the translation.`
+        `then analyze the original sentence, not its translation: ${lesson} ${keepOriginal} ` +
+        'When the text is longer than one sentence, output only the translation.'
       : '');
   const instructions = mode === 'dictionary' ? dictionaryEntry : translator;
   const reference = [];

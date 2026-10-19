@@ -48,6 +48,17 @@ test('buildMessages in learning mode gives a richer dictionary entry with forms 
   assert.match(system.content, /example/i);
 });
 
+test('the learning breakdown is of the original word, with forms and examples kept in its language and examples translated', () => {
+  const [dict] = buildMessages('Schritt', 'Russian', { mode: 'dictionary', learning: true });
+  assert.match(dict.content, /analyze the original word.*not its translation/i);
+  assert.match(dict.content, /forms and any example sentences in the original language/i);
+  assert.match(dict.content, /translation in parentheses after each example/i);
+  assert.match(dict.content, /labels and explanations in Russian/i);
+  const [sentence] = buildMessages('Ich warte.', 'Russian', { learning: true });
+  assert.match(sentence.content, /analyze the original sentence.*not its translation/i);
+  assert.match(sentence.content, /labels and explanations in Russian/i);
+});
+
 test('buildMessages uses a custom learning instruction in place of the default', () => {
   const [system] = buildMessages('warten', 'Russian', { mode: 'dictionary', learning: true, learningPrompt: 'only the gender and the plural' });
   assert.match(system.content, /only the gender and the plural/);

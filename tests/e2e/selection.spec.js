@@ -50,7 +50,10 @@ test('in learning mode a selected sentence gets a grammar breakdown after the tr
   await expect(popupText(page)).toContainText('[RU] The quick brown fox jumps over the lazy dog.');
   await expect(popupText(page)).toContainText('---');
   await expect(popupText(page)).toContainText('Parts: subject, verb');
-  expect(server.requests[0].body.messages[0].content).toContain('breakdown');
+  const system = server.requests[0].body.messages[0].content;
+  expect(system).toContain('breakdown');
+  expect(system).toMatch(/analyze the original sentence, not its translation/);
+  expect(system).toContain('labels and explanations in Russian');
 });
 
 test('a custom learning instruction is used in the request, and the breakdown still follows the translation', async ({ page, server, setSettings }) => {
