@@ -51,6 +51,12 @@
     .fixes.none { padding-left: 0; list-style: none; opacity: 0.75; }
     .back { margin-top: 6px; font-size: 13px; opacity: 0.75; white-space: pre-wrap; overflow-wrap: anywhere; }
     .back:empty { display: none; }
+    .rephrase { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .rephrase[hidden] { display: none; }
+    .rephrase-custom {
+      flex: 1 1 120px; min-width: 0; padding: 3px 8px; border: 1px solid #d0d7de; border-radius: 6px;
+      background: transparent; color: inherit; font: inherit;
+    }
     .foot { display: flex; align-items: center; gap: 8px; }
     .engine { margin-right: auto; font-size: 12px; opacity: 0.7; }
     .button {
@@ -66,7 +72,7 @@
     @keyframes pulse { 50% { opacity: 0.3; } }
     @media (prefers-color-scheme: dark) {
       .composer { background: #161b22; color: #e6edf3; }
-      .draft, .button { border-color: #30363d; }
+      .draft, .button, .rephrase-custom { border-color: #30363d; }
       .removed { color: #ff7b72; }
       .added { color: #7ee787; background: #033a16; }
       .result { background: #0d1117; }
@@ -84,7 +90,7 @@
   // Through background, which calls the AI provider, as a stream.
   // Resolves to { text }, { error: { message, action, code } }, or { aborted: true }.
   // Messages are worded in `from`, the user's language.
-  function translateByApi({ text, from, to, purpose, site, onChunk, signal, ui }) {
+  function translateByApi({ text, from, to, purpose, instruction, site, onChunk, signal, ui }) {
     const { t } = globalThis.spotslate;
     return new Promise((resolve) => {
       let port;
@@ -114,7 +120,7 @@
       port.onDisconnect.addListener(() => {
         resolve({ error: { message: t(ui, 'interrupted'), action: 'retry' } });
       });
-      port.postMessage({ text, from, to, purpose, site });
+      port.postMessage({ text, from, to, purpose, instruction, site });
     });
   }
 
@@ -226,7 +232,21 @@
     copyButton.type = 'button';
     copyButton.title = say('copyTitle');
     foot.append(contextButton, engineEl, actionButton, checkButton, copyButton);
-    root.append(head, draftEl, result, foot);
+
+    // Rewriting a finished translation (an AI provider only, not a correction): two presets and a field of one's own.
+    const rephraseRow = element('div', 'rephrase');
+    rephraseRow.hidden = true;
+    const politeButton = element('button', 'button rephrase-polite', say('rephrasePolite'));
+    politeButton.type = 'button';
+    const directButton = element('button', 'button rephrase-direct', say('rephraseDirect'));
+    directButton.type = 'button';
+    const customInput = element('input', 'rephrase-custom');
+    customInput.type = 'text';
+    customInput.placeholder = say('rephraseCustom');
+    customInput.setAttribute('aria-label', say('rephraseCustom'));
+    rephraseRow.append(politeButton, directButton, customInput);
+
+    root.append(head, draftEl, result, rephraseRow, foot);
     container.append(root);
     notesContainer.append(notesPanel.element);
 
@@ -277,6 +297,8 @@
       const ready = !loading && !error && Boolean(translation);
       copyButton.disabled = !ready;
       checkButton.disabled = !ready;
+      // Rephrasing is for a finished translation with an AI provider, never a correction.
+      rephraseRow.hidden = !(ready && !checking() && engine !== 'browser');
     }
 
     // The corrected text with what changed from the draft, and a line on each mistake.
@@ -303,7 +325,7 @@
       pending = null;
     }
 
-    function run({ text, from: origin, to: destination, purpose, onChunk, signal }) {
+    function run({ text, from: origin, to: destination, purpose, instruction = '', onChunk, signal }) {
       if (engine === 'browser') {
         return translateInPlace({
           text,
@@ -318,6 +340,7 @@
         from: origin,
         to: destination,
         purpose,
+        instruction,
         site,
         onChunk,
         signal,
@@ -449,6 +472,38 @@
       backEl.textContent = outcome.error ? outcome.error.message : say('back', { text: outcome.text.trim() });
     }
 
+    // Rewrites the finished translation in the same language, more polite, more direct, or as the user asks, and keeps
+    // it as the text to copy. The draft is left as it is.
+    function rephrase(instruction) {
+      if (!instruction || !translation || checking() || engine === 'browser') return Promise.resolve();
+      cancel();
+      const original = translation;
+      const lang = target.value;
+      showResult(original, { loading: true });
+      const controller = new AbortController();
+      const done = run({
+        text: original,
+        from: lang,
+        to: lang,
+        purpose: 'rephrase',
+        instruction,
+        signal: controller.signal,
+        onChunk: () => {}, // the rewrite shows when it is complete, like the translation
+      }).then((outcome) => {
+        if (controller.signal.aborted || outcome.aborted) return;
+        pending = null;
+        if (outcome.error) {
+          showResult(outcome.error.message, { error: outcome.error });
+          return;
+        }
+        translation = outcome.text.trim() || original;
+        shown = translation;
+        showResult(translation);
+      });
+      pending = { controller, done };
+      return done;
+    }
+
     function closeWindow() {
       saveDraft();
       destroy();
@@ -491,6 +546,17 @@
     });
     checkButton.addEventListener('click', () => check());
     copyButton.addEventListener('click', () => copy());
+    politeButton.addEventListener('click', () => rephrase('polite'));
+    directButton.addEventListener('click', () => rephrase('direct'));
+    customInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const instruction = customInput.value.trim();
+      if (!instruction) return;
+      customInput.value = '';
+      rephrase(instruction);
+    });
 
     showEngine();
     showContext();

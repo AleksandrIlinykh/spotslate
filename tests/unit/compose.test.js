@@ -1,13 +1,36 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  REPHRASE_STYLES,
   buildComposeMessages,
   buildCorrectMessages,
+  buildRephraseMessages,
   chooseComposeSource,
   chooseComposeTarget,
   countLanguage,
 } from '../../extension/lib/compose.js';
 import { notesBlock } from '../../extension/lib/notes.js';
+
+test('buildRephraseMessages rewrites the text in the target language with a preset style', () => {
+  const [system, user] = buildRephraseMessages('Could you send it?', 'German', 'polite');
+  assert.match(system.content, /Rewrite the user's text in German/);
+  assert.match(system.content, new RegExp(REPHRASE_STYLES.polite));
+  assert.match(system.content, /Output only the rewritten text/);
+  assert.deepEqual(user, { role: 'user', content: 'Could you send it?' });
+});
+
+test('buildRephraseMessages uses a free instruction as given', () => {
+  const [system] = buildRephraseMessages('x', 'German', 'make it shorter');
+  assert.match(system.content, /make it shorter/);
+  assert.doesNotMatch(system.content, new RegExp(REPHRASE_STYLES.polite));
+});
+
+test('buildRephraseMessages puts the site notes in a reference turn, not the system prompt', () => {
+  const messages = buildRephraseMessages('x', 'German', 'polite', { notes: 'A site about CI.' });
+  assert.equal(messages.length, 4);
+  assert.doesNotMatch(messages[0].content, /CI/);
+  assert.ok(messages[1].content.includes(notesBlock('A site about CI.', 'the site the user is writing on')));
+});
 
 // The user writes in German here; the project's files keep to the Latin script.
 

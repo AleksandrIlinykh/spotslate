@@ -41,6 +41,7 @@ spotslate/
     lib/
       prompt.js         buildMessages(text, languageName, { mode, context, notes })
       compose.js        buildComposeMessages(draft, fromName, toName, { notes }), buildCorrectMessages(draft, languageName, explainIn, { notes }),
+                        buildRephraseMessages(text, toName, instruction, { notes }), REPHRASE_STYLES,
                         countLanguage(counts, lang), chooseComposeSource(), chooseComposeTarget()
       notes.js          buildNotesMessages(notes, passages, languageName), cleanNotes(answer), takePassages(queue), passageOf(), notesBlock()
       providers.js      PROVIDERS, chatRequest(), modelsRequest(), parseModels(), answerText(), setupProblem(), hostPattern()
@@ -464,6 +465,14 @@ For someone practising a language: with the same language on both sides (German 
 
 What goes with the draft: with an AI provider, the site context (see "Site context"); "Check" goes without it. The prompt (`buildComposeMessages`) asks for clear, natural writing for work messages, comments and emails and keeps meaning, tone and line breaks. With Chrome's translator the draft is translated on the page or in the popup, from the user's language into the target one, without context; "Check" runs the other way.
 
+### Rephrasing a translation
+
+Under a finished translation, with an AI provider and not while correcting, a row offers to rewrite it: two presets, "More polite" and "More direct", and a field of the user's own ("Your own change…") that takes a short instruction on Enter. The row is hidden otherwise (a correction, Chrome's translator, or no translation yet).
+
+- A preset or the typed instruction goes as `purpose: 'rephrase'` with `instruction` (a key of `REPHRASE_STYLES` for a preset, else the user's words, capped at 200 characters in background), the current translation as the text, and the target language on both sides. The site context goes with it like a translation.
+- The rewrite (`buildRephraseMessages`) replaces the translation on screen and becomes the text to copy; the draft is left as it is. It can be run again on the result. It shows when complete, like the translation, and uses the same cancelling and errors.
+- `REPHRASE_STYLES`: `polite` → "make it more polite and considerate", `direct` → "make it more direct and to the point". The typed instruction is the user's own text, so it goes in the system prompt; the field is one-off and nothing is saved.
+
 The languages read on a site: background counts the language of every text translated there in mode `text` (`countLanguage`), in `chrome.storage.session` under `langs:{site}` as `{ [lang]: count }`, with no text, until the browser closes. The language is the passage's when Chrome's detector has already looked at it (`detectedBefore`, from the "Already in" check), or the source language Chrome's translator used; pages that translate with Chrome's translator send it with `{ type: 'read-lang', lang }`.
 
 ## Cache
@@ -480,7 +489,7 @@ Content opens `chrome.runtime.connect({ name: 'translate' })` and sends `{ text,
 - `{ type: 'done' }`: the translation is finished;
 - `{ type: 'error', code, message }`: an error with a readable `message`.
 
-For the compose window, `chrome.runtime.connect({ name: 'compose' })` takes `{ text, from, to, purpose, site }` (`purpose` is `'write'`, `'check'` or `'correct'`; `site` only from the toolbar popup, which is not a tab) and answers like `'translate'`. Messages: `{ type: 'compose-open', site?, pageLang }` → `{ languages, from, source, to, engine, providerName, site, notes, draft }`; `{ type: 'compose-target', site?, lang }` and `{ type: 'compose-source', site?, lang }` save the languages chosen on the right and on the left; `{ type: 'compose-draft', draft }` keeps the draft; `{ type: 'read-lang', lang }` counts a text read with Chrome's translator; `{ type: 'notes', site? }` and `{ type: 'clear-notes', site? }` read and clear the site context. The site of a message is the sender tab's host; extension pages name it themselves.
+For the compose window, `chrome.runtime.connect({ name: 'compose' })` takes `{ text, from, to, purpose, instruction?, site }` (`purpose` is `'write'`, `'check'`, `'correct'` or `'rephrase'`; `instruction` only for `'rephrase'`; `site` only from the toolbar popup, which is not a tab) and answers like `'translate'`. Messages: `{ type: 'compose-open', site?, pageLang }` → `{ languages, from, source, to, engine, providerName, site, notes, draft }`; `{ type: 'compose-target', site?, lang }` and `{ type: 'compose-source', site?, lang }` save the languages chosen on the right and on the left; `{ type: 'compose-draft', draft }` keeps the draft; `{ type: 'read-lang', lang }` counts a text read with Chrome's translator; `{ type: 'notes', site? }` and `{ type: 'clear-notes', site? }` read and clear the site context. The site of a message is the sender tab's host; extension pages name it themselves.
 
 A separate `chrome.runtime.sendMessage({ type: 'open-options' })` message makes background open the settings, and `{ type: 'page-settings' }` with `{ targetLang, engine, providerName, keys, languages, companion }` (`languages`: the codes, for the pickers), where `engine` is `'browser'` for the free translator and `'api'` otherwise (see "Settings" and "Free translator"). Until the answer is there the page uses English and the API; an outline and hint shown meanwhile, with the read key held, are shown again once it is.
 
@@ -738,5 +747,8 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   163. A custom learning instruction saved in the settings replaces the default in the request; a blank one saves as the default and the field shows it again.
   164. A custom learning instruction reaches the request's system prompt, and the breakdown still follows the translation after the "---" line.
   165. The learning prompt tells the model to analyze the original word or sentence, not its translation, keep forms and examples in the original language, and write the labels in the reading language.
+  166. Under a finished translation, "More polite" rewrites it as `purpose: 'rephrase'` with the preset instruction; the rewrite replaces the translation and becomes the text to copy.
+  167. A rephrase instruction typed in the window's own field is sent as the instruction, not a preset.
+  168. The rephrase row is hidden while the window is correcting the user's own writing (the same language on both sides).
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

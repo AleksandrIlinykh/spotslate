@@ -1,6 +1,6 @@
 import { buildMessages } from './lib/prompt.js';
 import { MIN_PASSAGE, buildNotesMessages, cleanNotes, passageOf, takePassages } from './lib/notes.js';
-import { buildComposeMessages, buildCorrectMessages, chooseComposeSource, chooseComposeTarget, countLanguage } from './lib/compose.js';
+import { buildComposeMessages, buildCorrectMessages, buildRephraseMessages, chooseComposeSource, chooseComposeTarget, countLanguage } from './lib/compose.js';
 import { readTextStream, sendChat } from './lib/chat.js';
 import { answerText, setupProblem } from './lib/providers.js';
 import { errorFromStatus, makeError, settingsChanged } from './lib/errors.js';
@@ -18,6 +18,7 @@ const MODES = new Set(['text', 'dictionary']);
 const CACHE_PREFIX = 'cache:';
 const LOCAL_ORIGIN_RULE = 1;
 const MAX_DRAFT = 3000;
+const MAX_INSTRUCTION = 200; // a rephrase instruction the user types; their own text, so a length cap is enough
 const NOTES_PREFIX = 'notes:'; // + site: the site context, in chrome.storage.session
 const LANGS_PREFIX = 'langs:'; // + site: { [lang]: count } of the texts read there, for the compose window
 const DRAFT_PREFIX = 'draft:'; // + site ('' off any site): the last draft written there, in chrome.storage.session
@@ -401,7 +402,7 @@ async function saveComposeSource(site, lang) {
  * @param {AbortSignal} signal
  * @param {(answer: SpotSlate.PortAnswer) => void} send
  */
-async function compose({ text, from, to, purpose }, site, signal, send) {
+async function compose({ text, from, to, purpose, instruction }, site, signal, send) {
   const draft = typeof text === 'string' ? text.slice(0, MAX_DRAFT) : '';
   if (!draft || !Object.hasOwn(LANGUAGES, from) || !Object.hasOwn(LANGUAGES, to)) return;
   const settings = await loadSettings();
@@ -424,6 +425,14 @@ async function compose({ text, from, to, purpose }, site, signal, send) {
   // The check translates back without the notes, to show what the text says by itself.
   if (purpose === 'check') {
     await stream(provider, buildMessages(draft, LANGUAGES[to]), signal, send, settings.targetLang);
+    return;
+  }
+  // Rephrase rewrites the finished translation in the same language, more polite, more direct, or as the user asks.
+  if (purpose === 'rephrase') {
+    const how = typeof instruction === 'string' ? instruction.slice(0, MAX_INSTRUCTION).trim() : '';
+    if (!how) return;
+    const notes = siteMode.noContext ? '' : await notesOf(site);
+    await stream(provider, buildRephraseMessages(draft, LANGUAGES[to], how, { notes }), signal, send, settings.targetLang);
     return;
   }
   const notes = siteMode.noContext ? '' : await notesOf(site);

@@ -166,6 +166,39 @@ test('Check translates the translation back into the user language', async ({ pa
   expect(userOf(check)).toBe(`[RU] ${DRAFT}`);
 });
 
+test('a finished translation can be rephrased more politely, and the rewrite becomes the text to copy', { tag: '@smoke' }, async ({ page, server }) => {
+  await openOnComment(page, server);
+  await write(page, DRAFT);
+  await expect(part(page, 'translation')).toHaveText(`[RU] ${DRAFT}`);
+  await expect(part(page, 'rephrase')).toBeVisible();
+  await part(page, 'rephrase-polite').click();
+  await expect(part(page, 'translation')).toHaveText(`Reworded: [RU] ${DRAFT}`);
+  const request = server.requests.at(-1);
+  expect(systemOf(request)).toContain("Rewrite the user's text in English");
+  expect(systemOf(request)).toContain('more polite');
+  expect(userOf(request)).toBe(`[RU] ${DRAFT}`);
+});
+
+test('a rephrase in the user own words is sent as the instruction', async ({ page, server }) => {
+  await openOnComment(page, server);
+  await write(page, DRAFT);
+  await expect(part(page, 'translation')).toHaveText(`[RU] ${DRAFT}`);
+  await part(page, 'rephrase-custom').fill('make it shorter');
+  await part(page, 'rephrase-custom').press('Enter');
+  await expect(part(page, 'translation')).toHaveText(`Reworded: [RU] ${DRAFT}`);
+  const request = server.requests.at(-1);
+  expect(systemOf(request)).toContain('make it shorter');
+  expect(systemOf(request)).not.toContain('more polite');
+});
+
+test('the rephrase row is gone when the window is correcting the user own writing', async ({ page, server }) => {
+  await openOnComment(page, server);
+  await write(page, DRAFT);
+  await expect(part(page, 'rephrase')).toBeVisible();
+  await chooseLanguage(compose(page), 'target', 'ru'); // the same language on both sides: a correction
+  await expect(part(page, 'rephrase')).toBeHidden();
+});
+
 test('Esc closes the window and the draft comes back next time', async ({ page, server }) => {
   await openOnComment(page, server);
   await write(page, DRAFT);

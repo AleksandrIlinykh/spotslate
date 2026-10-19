@@ -160,7 +160,9 @@ async function completions(req, res, { requests, notesRequests }, state, api) {
   // The learning prompts (lib/prompt.js) ask for more: a sentence gets a breakdown after a '---' line, a dictionary
   // word its forms and an example. The key picks nothing here; the system prompt does.
   const system = String(record.body.system ?? record.body.messages[0].content);
-  if (!isCorrection(record.body) && /add a line containing exactly "---"/.test(system)) {
+  if (/Rewrite the user's text/.test(system)) {
+    translation = `Reworded: ${text}`; // a rephrase of a finished translation (lib/compose.js)
+  } else if (!isCorrection(record.body) && /add a line containing exactly "---"/.test(system)) {
     translation += `\n---\nParts: subject, verb`;
   } else if (/bilingual dictionary/.test(system) && !/Add nothing else\./.test(system)) {
     translation += `\nForms: ${text}, ${text}s\nExample: ${text} here`;

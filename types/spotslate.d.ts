@@ -228,8 +228,10 @@ declare namespace SpotSlate {
     text: string;
     from: Lang;
     to: Lang;
-    /** 'write' into `to`; 'check' it back into the user's own language; 'correct' the user's own writing. */
-    purpose: 'write' | 'check' | 'correct';
+    /** 'write' into `to`; 'check' it back into the user's own language; 'correct' the user's own writing; 'rephrase' the finished translation in `to`. */
+    purpose: 'write' | 'check' | 'correct' | 'rephrase';
+    /** For 'rephrase': a preset key of `REPHRASE_STYLES` or the user's own short instruction. */
+    instruction?: string;
     site?: Site | null;
   }
 
