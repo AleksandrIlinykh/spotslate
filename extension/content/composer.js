@@ -51,12 +51,13 @@
     .fixes.none { padding-left: 0; list-style: none; opacity: 0.75; }
     .back { margin-top: 6px; font-size: 13px; opacity: 0.75; white-space: pre-wrap; overflow-wrap: anywhere; }
     .back:empty { display: none; }
-    .rephrase { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .rephrase { display: flex; align-items: center; gap: 6px; }
     .rephrase[hidden] { display: none; }
-    .rephrase-custom {
-      flex: 1 1 120px; min-width: 0; padding: 3px 8px; border: 1px solid #d0d7de; border-radius: 6px;
+    .rephrase-input {
+      flex: 1 1 auto; min-width: 0; padding: 3px 8px; border: 1px solid #d0d7de; border-radius: 6px;
       background: transparent; color: inherit; font: inherit;
     }
+    .rephrase-run { flex: none; padding: 2px 9px; font-size: 15px; line-height: 1.2; }
     .foot { display: flex; align-items: center; gap: 8px; }
     .engine { margin-right: auto; font-size: 12px; opacity: 0.7; }
     .button {
@@ -72,7 +73,7 @@
     @keyframes pulse { 50% { opacity: 0.3; } }
     @media (prefers-color-scheme: dark) {
       .composer { background: #161b22; color: #e6edf3; }
-      .draft, .button, .rephrase-custom { border-color: #30363d; }
+      .draft, .button, .rephrase-input { border-color: #30363d; }
       .removed { color: #ff7b72; }
       .added { color: #7ee787; background: #033a16; }
       .result { background: #0d1117; }
@@ -233,18 +234,20 @@
     copyButton.title = say('copyTitle');
     foot.append(contextButton, engineEl, actionButton, checkButton, copyButton);
 
-    // Rewriting a finished translation (an AI provider only, not a correction): two presets and a field of one's own.
+    // Rewriting a finished translation (an AI provider only, not a correction): a field for how to change it and a
+    // button to regenerate; empty asks for a different wording.
     const rephraseRow = element('div', 'rephrase');
     rephraseRow.hidden = true;
-    const politeButton = element('button', 'button rephrase-polite', say('rephrasePolite'));
-    politeButton.type = 'button';
-    const directButton = element('button', 'button rephrase-direct', say('rephraseDirect'));
-    directButton.type = 'button';
-    const customInput = element('input', 'rephrase-custom');
-    customInput.type = 'text';
-    customInput.placeholder = say('rephraseCustom');
-    customInput.setAttribute('aria-label', say('rephraseCustom'));
-    rephraseRow.append(politeButton, directButton, customInput);
+    const rephraseInput = element('input', 'rephrase-input');
+    rephraseInput.type = 'text';
+    rephraseInput.placeholder = say('rephrasePrompt');
+    rephraseInput.title = say('rephraseHelp');
+    rephraseInput.setAttribute('aria-label', say('rephrasePrompt'));
+    const rephraseButton = element('button', 'button rephrase-run', '↻');
+    rephraseButton.type = 'button';
+    rephraseButton.title = say('rephraseHelp');
+    rephraseButton.setAttribute('aria-label', say('rephraseRun'));
+    rephraseRow.append(rephraseInput, rephraseButton);
 
     root.append(head, draftEl, result, rephraseRow, foot);
     container.append(root);
@@ -475,7 +478,7 @@
     // Rewrites the finished translation in the same language, more polite, more direct, or as the user asks, and keeps
     // it as the text to copy. The draft is left as it is.
     function rephrase(instruction) {
-      if (!instruction || !translation || checking() || engine === 'browser') return Promise.resolve();
+      if (!translation || checking() || engine === 'browser') return Promise.resolve();
       cancel();
       const original = translation;
       const lang = target.value;
@@ -546,16 +549,13 @@
     });
     checkButton.addEventListener('click', () => check());
     copyButton.addEventListener('click', () => copy());
-    politeButton.addEventListener('click', () => rephrase('polite'));
-    directButton.addEventListener('click', () => rephrase('direct'));
-    customInput.addEventListener('keydown', (event) => {
+    const runRephrase = () => rephrase(rephraseInput.value.trim());
+    rephraseButton.addEventListener('click', runRephrase);
+    rephraseInput.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' || event.isComposing) return;
       event.preventDefault();
       event.stopPropagation();
-      const instruction = customInput.value.trim();
-      if (!instruction) return;
-      customInput.value = '';
-      rephrase(instruction);
+      runRephrase();
     });
 
     showEngine();

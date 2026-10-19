@@ -166,29 +166,28 @@ test('Check translates the translation back into the user language', async ({ pa
   expect(userOf(check)).toBe(`[RU] ${DRAFT}`);
 });
 
-test('a finished translation can be rephrased more politely, and the rewrite becomes the text to copy', { tag: '@smoke' }, async ({ page, server }) => {
+test('the regenerate button rewrites the translation with the typed instruction', { tag: '@smoke' }, async ({ page, server }) => {
   await openOnComment(page, server);
   await write(page, DRAFT);
   await expect(part(page, 'translation')).toHaveText(`[RU] ${DRAFT}`);
   await expect(part(page, 'rephrase')).toBeVisible();
-  await part(page, 'rephrase-polite').click();
+  await part(page, 'rephrase-input').fill('make it shorter');
+  await part(page, 'rephrase-run').click();
   await expect(part(page, 'translation')).toHaveText(`Reworded: [RU] ${DRAFT}`);
   const request = server.requests.at(-1);
   expect(systemOf(request)).toContain("Rewrite the user's text in English");
-  expect(systemOf(request)).toContain('more polite');
+  expect(systemOf(request)).toContain('make it shorter');
   expect(userOf(request)).toBe(`[RU] ${DRAFT}`);
 });
 
-test('a rephrase in the user own words is sent as the instruction', async ({ page, server }) => {
+test('regenerating with an empty field, on Enter, asks for a different wording', async ({ page, server }) => {
   await openOnComment(page, server);
   await write(page, DRAFT);
   await expect(part(page, 'translation')).toHaveText(`[RU] ${DRAFT}`);
-  await part(page, 'rephrase-custom').fill('make it shorter');
-  await part(page, 'rephrase-custom').press('Enter');
+  await part(page, 'rephrase-input').click();
+  await page.keyboard.press('Enter');
   await expect(part(page, 'translation')).toHaveText(`Reworded: [RU] ${DRAFT}`);
-  const request = server.requests.at(-1);
-  expect(systemOf(request)).toContain('make it shorter');
-  expect(systemOf(request)).not.toContain('more polite');
+  expect(systemOf(server.requests.at(-1))).toMatch(/reword it differently/i);
 });
 
 test('the rephrase row is gone when the window is correcting the user own writing', async ({ page, server }) => {

@@ -41,7 +41,7 @@ spotslate/
     lib/
       prompt.js         buildMessages(text, languageName, { mode, context, notes })
       compose.js        buildComposeMessages(draft, fromName, toName, { notes }), buildCorrectMessages(draft, languageName, explainIn, { notes }),
-                        buildRephraseMessages(text, toName, instruction, { notes }), REPHRASE_STYLES,
+                        buildRephraseMessages(text, toName, instruction, { notes }),
                         countLanguage(counts, lang), chooseComposeSource(), chooseComposeTarget()
       notes.js          buildNotesMessages(notes, passages, languageName), cleanNotes(answer), takePassages(queue), passageOf(), notesBlock()
       providers.js      PROVIDERS, chatRequest(), modelsRequest(), parseModels(), answerText(), setupProblem(), hostPattern()
@@ -467,11 +467,11 @@ What goes with the draft: with an AI provider, the site context (see "Site conte
 
 ### Rephrasing a translation
 
-Under a finished translation, with an AI provider and not while correcting, a row offers to rewrite it: two presets, "More polite" and "More direct", and a field of the user's own ("Your own change…") that takes a short instruction on Enter. The row is hidden otherwise (a correction, Chrome's translator, or no translation yet).
+Under a finished translation, with an AI provider and not while correcting, a row offers to rewrite it: a field ("Rephrase…") for how to change it and a regenerate button (a cyclic arrow). Both the field and the button carry a tooltip ("Say how to change the translation (shorter, more polite…), or leave it empty for a different version."). The regenerate button and Enter in the field both run it. The row is hidden otherwise (a correction, Chrome's translator, or no translation yet).
 
-- A preset or the typed instruction goes as `purpose: 'rephrase'` with `instruction` (a key of `REPHRASE_STYLES` for a preset, else the user's words, capped at 200 characters in background), the current translation as the text, and the target language on both sides. The site context goes with it like a translation.
-- The rewrite (`buildRephraseMessages`) replaces the translation on screen and becomes the text to copy; the draft is left as it is. It can be run again on the result. It shows when complete, like the translation, and uses the same cancelling and errors.
-- `REPHRASE_STYLES`: `polite` → "make it more polite and considerate", `direct` → "make it more direct and to the point". The typed instruction is the user's own text, so it goes in the system prompt; the field is one-off and nothing is saved.
+- It goes as `purpose: 'rephrase'` with `instruction` (the user's words, capped at 200 characters in background; empty is allowed), the current translation as the text, and the target language on both sides. The site context goes with it like a translation.
+- The rewrite (`buildRephraseMessages`) replaces the translation on screen and becomes the text to copy; the draft is left as it is. It can be run again on the result (the field keeps its text). It shows when complete, like the translation, and uses the same cancelling and errors.
+- `buildRephraseMessages` puts the instruction in the system prompt ("Rewrite the user's text in {toName} as instructed: {instruction}."). It is the user's own text, so it goes in the system prompt, not as reference. With nothing typed, the instruction is "reword it differently, keeping the meaning", so the button gives another version.
 
 The languages read on a site: background counts the language of every text translated there in mode `text` (`countLanguage`), in `chrome.storage.session` under `langs:{site}` as `{ [lang]: count }`, with no text, until the browser closes. The language is the passage's when Chrome's detector has already looked at it (`detectedBefore`, from the "Already in" check), or the source language Chrome's translator used; pages that translate with Chrome's translator send it with `{ type: 'read-lang', lang }`.
 
@@ -747,8 +747,8 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   163. A custom learning instruction saved in the settings replaces the default in the request; a blank one saves as the default and the field shows it again.
   164. A custom learning instruction reaches the request's system prompt, and the breakdown still follows the translation after the "---" line.
   165. The learning prompt tells the model to analyze the original word or sentence, not its translation, keep forms and examples in the original language, and write the labels in the reading language.
-  166. Under a finished translation, "More polite" rewrites it as `purpose: 'rephrase'` with the preset instruction; the rewrite replaces the translation and becomes the text to copy.
-  167. A rephrase instruction typed in the window's own field is sent as the instruction, not a preset.
+  166. Under a finished translation, the regenerate button rewrites it as `purpose: 'rephrase'` with the typed instruction; the rewrite replaces the translation and becomes the text to copy.
+  167. Regenerating with an empty field (on Enter) asks the model for a different wording.
   168. The rephrase row is hidden while the window is correcting the user's own writing (the same language on both sides).
   169. The compose draft can be typed on a page that traps focus to a modal (a document `focusin` listener that pulls focus back): the window's host stops focus events, so the field keeps focus.
 

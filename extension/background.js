@@ -427,10 +427,9 @@ async function compose({ text, from, to, purpose, instruction }, site, signal, s
     await stream(provider, buildMessages(draft, LANGUAGES[to]), signal, send, settings.targetLang);
     return;
   }
-  // Rephrase rewrites the finished translation in the same language, more polite, more direct, or as the user asks.
+  // Rephrase rewrites the finished translation in the same language, as the user asks or, with nothing typed, differently.
   if (purpose === 'rephrase') {
-    const how = typeof instruction === 'string' ? instruction.slice(0, MAX_INSTRUCTION).trim() : '';
-    if (!how) return;
+    const how = typeof instruction === 'string' ? instruction.slice(0, MAX_INSTRUCTION) : '';
     const notes = siteMode.noContext ? '' : await notesOf(site);
     await stream(provider, buildRephraseMessages(draft, LANGUAGES[to], how, { notes }), signal, send, settings.targetLang);
     return;

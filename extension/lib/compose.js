@@ -16,17 +16,11 @@ export function buildComposeMessages(draft, fromName, toName, { notes = '' } = {
   return [{ role: 'system', content: instructions }, ...referenceTurns(reference), { role: 'user', content: draft }];
 }
 
-// The preset ways to rephrase a finished translation; a free instruction (the user's own words) is used as is.
-export const REPHRASE_STYLES = Object.freeze({
-  polite: 'make it more polite and considerate',
-  direct: 'make it more direct and to the point',
-});
-
-// The prompt for rewriting a finished translation in the same language: more polite, more direct, or whatever the
-// user asks. The text is already the user's, so the instruction goes in the system prompt; the site notes stay as
-// reference, like everywhere else.
+// The prompt for rewriting a finished translation in the same language: whatever the user asks, or, with nothing typed,
+// a different wording. The text is already the user's, so the instruction goes in the system prompt; the site notes
+// stay as reference, like everywhere else.
 export function buildRephraseMessages(text, toName, instruction, { notes = '' } = {}) {
-  const how = REPHRASE_STYLES[instruction] ?? instruction;
+  const how = (typeof instruction === 'string' && instruction.trim()) || 'reword it differently, keeping the meaning';
   const system =
     `You help a professional write in ${toName} at work. ` +
     `Rewrite the user's text in ${toName} as instructed: ${how}. ` +
