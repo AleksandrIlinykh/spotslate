@@ -57,6 +57,8 @@
     #status { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
     .footer { margin: 8px 0 0; text-align: center; }
     fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .check input { width: 16px; height: 16px; margin: 0; }
     #sites { margin: 8px 0 0; padding: 0; list-style: none; }
     #sites li { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
     #sites li:last-child { border-bottom: 0; }
@@ -141,6 +143,13 @@
       <input id="baseUrl" name="baseUrl" spellcheck="false">
       <p class="hint">The address up to /v1. Clear it to go back to the provider's own.</p>
       </div>
+    </section>
+
+    <section class="card" aria-labelledby="learningTitle">
+      <h2 id="learningTitle">Learning mode</h2>
+      <p class="lead">Turn a translation into a short lesson while you study a language.</p>
+      <label class="check"><input type="checkbox" id="learning" name="learning"> Show a grammar breakdown with a word or a sentence you select</label>
+      <p class="hint">It needs an AI provider; the built-in translator only translates.</p>
     </section>
 
     <section class="card" aria-labelledby="keysTitle">

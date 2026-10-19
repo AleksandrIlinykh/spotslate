@@ -11,14 +11,21 @@ test('withDefaults returns the free built-in translator, the browser language, n
     providers: {},
     keys: DEFAULT_KEYS,
     companion: 'pup',
+    learning: false,
   });
   assert.equal(withDefaults(undefined, 'win', 'de-AT').targetLang, 'de');
-  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup' });
+  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false });
 });
 
 test('withDefaults keeps the companion chosen, or none, and brings Spot back for anything else', () => {
   for (const companion of ['pup', 'cat', 'corgi', 'none']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, companion);
   for (const companion of ['dragon', '', 7, null, ' cat']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, 'pup');
+});
+
+test('withDefaults keeps the learning toggle as a boolean and starts it off', () => {
+  assert.equal(withDefaults(undefined, 'win', 'en').learning, false);
+  assert.equal(withDefaults({ learning: true }, 'win', 'en').learning, true);
+  for (const bad of ['yes', 1, null, {}]) assert.equal(withDefaults({ learning: bad }, 'win', 'en').learning, false);
 });
 
 test('withDefaults drops the agreement field of older settings', () => {
@@ -51,6 +58,7 @@ test('withDefaults keeps the chosen provider and every provider entry, trimmed',
     },
     keys: DEFAULT_KEYS,
     companion: 'pup',
+    learning: false,
   });
 });
 
@@ -62,6 +70,7 @@ test('withDefaults drops unknown providers, unknown fields and non-string values
     providers: { openai: { apiKey: '', model: '', baseUrl: '' } },
     keys: DEFAULT_KEYS,
     companion: 'pup',
+    learning: false,
   });
 });
 
@@ -77,6 +86,7 @@ test('settings saved before providers existed become the DeepSeek entry', () => 
     providers: { deepseek: { apiKey: 'sk-1', model: 'deepseek-v4-pro', baseUrl: 'https://example.com' } },
     keys: DEFAULT_KEYS,
     companion: 'pup',
+    learning: false,
   });
 });
 

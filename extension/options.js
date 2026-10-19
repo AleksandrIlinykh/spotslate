@@ -55,6 +55,7 @@ function show(settings) {
   showKeys(settings.keys);
   form.elements.targetLang.value = settings.targetLang;
   form.elements.companion.value = settings.companion;
+  form.elements.learning.checked = settings.learning;
   for (const [id, preset] of Object.entries(PROVIDERS)) {
     const entry = settings.providers[id];
     drafts[id] = { apiKey: entry?.apiKey ?? '', model: entry?.model || preset.model, baseUrl: entry?.baseUrl || preset.baseUrl };
@@ -400,6 +401,7 @@ form.addEventListener('submit', async (event) => {
     providers: entriesToStore(),
     keys: { read: form.elements.readKey.value, write: writeShortcut },
     companion: form.elements.companion.value,
+    learning: form.elements.learning.checked,
   });
   await chrome.storage.local.set({ settings });
   show(settings);

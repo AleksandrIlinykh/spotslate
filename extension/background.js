@@ -75,6 +75,7 @@ function pageSettings(settings) {
     keys: { read, readName: readKeyName(read, currentPlatform()), write },
     languages: Object.keys(LANGUAGES),
     companion: settings.companion,
+    learning: settings.learning,
   };
 }
 
@@ -125,12 +126,13 @@ chrome.runtime.onConnect.addListener((port) => {
       compose(message, siteOf(port.sender, message.site), controller.signal, send);
       return;
     }
-    const { text, mode, context, lang } = message;
+    const { text, mode, context, learning, lang } = message;
     if (typeof text !== 'string' || !text.trim()) return;
     const request = {
       text: text.slice(0, MAX_TEXT),
       mode: MODES.has(mode) ? mode : 'text',
       context: typeof context === 'string' ? context.slice(0, MAX_CONTEXT) : '',
+      learning: learning === true,
     };
     const site = siteOf(port.sender);
     watch(site, port.sender);
@@ -443,6 +445,8 @@ async function compose({ text, from, to, purpose }, site, signal, send) {
  */
 async function translate(request, site, signal, send, onTranslated = () => {}) {
   const settings = await loadSettings();
+  // The setting is authoritative: a page cannot ask for a breakdown the user turned off.
+  request = { ...request, learning: Boolean(request.learning) && settings.learning };
   const provider = activeProvider(settings);
   if (provider.api === 'browser') {
     // The page did not hear about the switch to the free translator yet; the message is on its way.
@@ -521,8 +525,8 @@ async function stream(provider, messages, signal, send, lang) {
 
 // Translations are shared by all tabs for the browser session (chrome.storage.session). The notes are left out:
 // a text translated once is reused while they grow.
-async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context }) {
-  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context]));
+async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, learning }) {
+  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, learning]));
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
   return CACHE_PREFIX + Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

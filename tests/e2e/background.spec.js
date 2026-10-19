@@ -227,8 +227,9 @@ test.describe('free built-in translator', () => {
       siteMode,
       languages,
       companion: 'pup',
+      learning: false,
     });
-    await setSettings({ provider: 'chrome', targetLang: 'de', companion: 'cat' });
+    await setSettings({ provider: 'chrome', targetLang: 'de', companion: 'cat', learning: true });
     expect(await pageSettings(page)).toEqual({
       targetLang: 'de',
       engine: 'browser',
@@ -237,6 +238,7 @@ test.describe('free built-in translator', () => {
       siteMode,
       languages,
       companion: 'cat',
+      learning: true,
     });
   });
 

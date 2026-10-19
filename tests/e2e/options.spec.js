@@ -132,6 +132,7 @@ test('each provider keeps its own key, model and URL while switching, and all ar
     },
     keys: DEFAULT_KEYS,
     companion: 'pup',
+    learning: false,
   });
 });
 
@@ -152,7 +153,17 @@ test('saves trimmed values, and a blank model or URL means the default', async (
     providers: { deepseek: { apiKey: 'sk-test', model: '', baseUrl: '' } },
     keys: DEFAULT_KEYS,
     companion: 'pup',
+    learning: false,
   });
+});
+
+test('saves the learning mode, off by default and kept when turned on', async ({ page, extensionId, serviceWorker }) => {
+  await page.goto(optionsUrl(extensionId));
+  await expect(page.locator('#learning')).not.toBeChecked();
+  await page.locator('#learning').check();
+  await save(page);
+  await expect(page.locator('#status')).toHaveText('Saved');
+  expect((await stored(serviceWorker)).learning).toBe(true);
 });
 
 test('shows saved values when opened again', async ({ page, extensionId, server, setSettings }) => {
@@ -354,7 +365,7 @@ test('a provider picked while the saved settings are still loading is not overwr
 
 test('the settings come in blocks, each with its title', async ({ page, extensionId }) => {
   await page.goto(optionsUrl(extensionId));
-  await expect(page.locator('.card > h2')).toHaveText(['Translation', 'Keys', 'Companion', 'Sites']);
+  await expect(page.locator('.card > h2')).toHaveText(['Translation', 'Learning mode', 'Keys', 'Companion', 'Sites']);
   await expect(page.locator('.card').filter({ hasText: 'API key' })).toHaveCount(1); // the provider's fields are in its block
 });
 

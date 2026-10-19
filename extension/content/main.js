@@ -62,6 +62,7 @@
   let targetLang = DEFAULT_LANG;
   let engine = 'api'; // 'api' (background calls an AI provider) or 'browser' (Chrome's translator, on this page)
   let settingsEngine = 'api'; // the engine the settings choose; `engine` is it unless the site is kept on this computer
+  let learning = false; // the learning mode: a grammar breakdown with a word or a sentence the user selects
   let providerName = '';
   // What the user chose for this site in the toolbar window (lib/sites.js): off, only on this computer, no context.
   let siteMode = { off: false, local: false, noContext: false };
@@ -83,6 +84,7 @@
     .then((answer) => {
       targetLang = answer?.targetLang || DEFAULT_LANG;
       settingsEngine = answer?.engine || 'api';
+      learning = answer?.learning ?? false;
       keys = answer?.keys ?? keys;
       providerName = answer?.providerName ?? '';
       siteMode = answer?.siteMode ?? siteMode;
@@ -211,7 +213,9 @@
     const mode = picked.selection && isShortPhrase(picked.text) ? 'dictionary' : 'text';
     // Nothing around a selection in a field is taken: it may hold anything, so only what the user selected goes.
     const around = picked.selection && !picked.field;
-    shown = { text: picked.text, mode, context: mode === 'dictionary' && around ? contextOf(picked.target) : '' };
+    // The breakdown is for a word or a sentence the user picked out; Alt over a whole block stays a plain translation.
+    const learn = learning && (mode === 'dictionary' || Boolean(picked.selection));
+    shown = { text: picked.text, mode, context: mode === 'dictionary' && around ? contextOf(picked.target) : '', learning: learn };
     // Chrome's translator needs the source language: a few selected words tell too little, their paragraph more.
     sample = (around && blockTextOf(picked.target)) || picked.text;
     popup.open(picked.target);
@@ -254,8 +258,8 @@
     translate(shown);
   }
 
-  function cacheKey({ mode, text, context }) {
-    return JSON.stringify([mode, text, context]);
+  function cacheKey({ mode, text, context, learning }) {
+    return JSON.stringify([mode, text, context, learning]);
   }
 
   function translate(request) {
@@ -291,10 +295,10 @@
       port = null;
       popup.setError(t(targetLang, 'interrupted'), { action: 'retry' });
     });
-    const { text, mode, context } = request;
+    const { text, mode, context, learning } = request;
     // The passage's language, if the detector has looked at it, for the memory of what was read on the site.
     const lang = sourceLanguage(detectedBefore(text));
-    current.postMessage({ text, mode, context, lang });
+    current.postMessage({ text, mode, context, learning, lang });
   }
 
   // The free engine: Chrome's translator runs right here, and nothing leaves the page.
@@ -614,6 +618,7 @@
     const before = targetLang;
     targetLang = message.targetLang || DEFAULT_LANG;
     settingsEngine = message.engine || 'api';
+    learning = message.learning ?? false;
     keys = message.keys ?? keys;
     providerName = message.providerName ?? '';
     languages = message.languages ?? languages;

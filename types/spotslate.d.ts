@@ -54,6 +54,8 @@ declare namespace SpotSlate {
     providers: Record<string, ProviderEntry>;
     keys: Keys;
     companion: Companion;
+    /** The learning mode: a grammar breakdown with the translation, and the vocabulary. */
+    learning: boolean;
   }
 
   /** A preset of lib/providers.js, by its id in `PROVIDERS`. */
@@ -99,6 +101,8 @@ declare namespace SpotSlate {
     /** The codes of `LANGUAGES`, in order, for the language pickers. */
     languages: Lang[];
     companion: Companion;
+    /** The learning mode: a breakdown with a word or a sentence the user selects. */
+    learning: boolean;
   }
 
   /** An error as background words it (lib/errors.js): `code` such as 'no_key', 'auth', 'engine_changed'. */
@@ -125,6 +129,7 @@ declare namespace SpotSlate {
       readKey: HTMLSelectElement;
       writeKey: HTMLInputElement;
       companion: RadioNodeList;
+      learning: HTMLInputElement;
     };
   }
 
@@ -207,6 +212,8 @@ declare namespace SpotSlate {
     mode: 'text' | 'dictionary';
     /** The words around a selected phrase, for a dictionary entry. */
     context: string;
+    /** Add a grammar breakdown: the learning mode, for a selected word or sentence. */
+    learning: boolean;
     /** The text's language, if the detector looked at it. */
     lang: Lang | null;
   }

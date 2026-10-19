@@ -32,6 +32,27 @@ test('buildMessages uses the plain translation prompt by default', () => {
   assert.deepEqual(buildMessages('x', 'German'), buildMessages('x', 'German', { mode: 'text' }));
 });
 
+test('buildMessages in learning mode adds a grammar breakdown after the translation of a single sentence', () => {
+  const [system] = buildMessages('Ich habe gewartet.', 'Russian', { learning: true });
+  assert.match(system.content, /Translate the user's text into Russian\./);
+  assert.match(system.content, /breakdown/i);
+  assert.match(system.content, /single sentence/i);
+  assert.match(system.content, /---/); // the separator that keeps the translation first in the stream
+  assert.match(system.content, /only the translation/i); // longer text stays plain
+});
+
+test('buildMessages in learning mode gives a richer dictionary entry with forms and an example', () => {
+  const [system] = buildMessages('warten', 'Russian', { mode: 'dictionary', learning: true });
+  assert.match(system.content, /bilingual dictionary/);
+  assert.match(system.content, /forms/i);
+  assert.match(system.content, /example/i);
+});
+
+test('buildMessages without learning keeps the plain prompts', () => {
+  assert.deepEqual(buildMessages('x', 'German', { learning: false }), buildMessages('x', 'German'));
+  assert.deepEqual(buildMessages('bank', 'Russian', { mode: 'dictionary', learning: false }), buildMessages('bank', 'Russian', { mode: 'dictionary' }));
+});
+
 test('buildMessages asks a dictionary for the sense that fits the words around the phrase, given apart as reference', () => {
   const [system, reference, reply, user] = buildMessages('bank', 'Russian', { mode: 'dictionary', context: 'we sat on the river bank and watched' });
   assert.match(system.content, /the translation that fits the sentence it is from, given as reference/);

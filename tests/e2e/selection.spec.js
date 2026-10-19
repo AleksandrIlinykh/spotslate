@@ -43,6 +43,35 @@ test('a selection of one to three words gets a dictionary entry', async ({ page,
   expect(server.requests[0].body.messages[0].content).toContain('bilingual dictionary');
 });
 
+test('in learning mode a selected sentence gets a grammar breakdown after the translation', { tag: '@smoke' }, async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 0, 44));
+  await expect(popupText(page)).toContainText('[RU] The quick brown fox jumps over the lazy dog.');
+  await expect(popupText(page)).toContainText('---');
+  await expect(popupText(page)).toContainText('Parts: subject, verb');
+  expect(server.requests[0].body.messages[0].content).toContain('breakdown');
+});
+
+test('in learning mode a selected word gets its forms and an example', async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 4, 9));
+  await expect(popupText(page)).toContainText('[RU] quick');
+  await expect(popupText(page)).toContainText('Forms: quick');
+  await expect(popupText(page)).toContainText('Example: quick here');
+  expect(server.requests[0].body.messages[0].content).toContain('bilingual dictionary');
+});
+
+test('in learning mode Alt over a paragraph stays a plain translation with no breakdown', async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true });
+  await page.goto(`${server.url}/page.html`);
+  await moveTo(page, '#p1');
+  await page.keyboard.down('Alt');
+  await expect(popupText(page)).toHaveText(`[RU] ${P1}`);
+  expect(server.requests[0].body.messages[0].content).not.toContain('breakdown');
+});
+
 test('a selection inside an editor is translated', async ({ page, server }) => {
   await page.locator('#editor-p1').scrollIntoViewIfNeeded();
   await altOver(page, await select(page, '#editor-p1', 6, 15));
