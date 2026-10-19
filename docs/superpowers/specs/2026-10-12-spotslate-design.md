@@ -69,6 +69,7 @@ spotslate/
       pup.js            heroes.pup: Spot, a shiba
       cat.js            heroes.cat: Ink, a black cat
       corgi.js          heroes.corgi: Biscuit, a corgi
+      monkey.js         heroes.monkey: Momo, a monkey
       hero.js           drawHero(hero, host, options), createHero(hero, spot): a companion drawn, by the mouse and on the popup
       main.js           trigger, what to translate, talking to background, closing, page cache, Alt+click and Alt+T
     compose.html        the toolbar popup: the compose window on its own
@@ -129,7 +130,7 @@ Stored in `chrome.storage.local` under the `settings` key:
 | `targetLang` | the browser's language, else `"en"` | target language code; until one is saved, `defaultTargetLang()` takes Chrome's interface language (`chrome.i18n.getUILanguage()`) when it is in `LANGUAGES`, else English |
 | `providers` | `{}` | `{ [id]: { apiKey, model, baseUrl } }`, remembered for every provider the user filled in |
 | `keys` | `{ read: "Alt", write: Alt+T }` | the key held to read and the shortcut to write (see "Keys") |
-| `companion` | `"pup"` | the companion (see "Companion"): `pup`, `cat` or `corgi` (`COMPANIONS`), or `none`; anything else is `pup` |
+| `companion` | `"pup"` | the companion (see "Companion"): `pup`, `cat`, `corgi` or `monkey` (`COMPANIONS`), or `none`; anything else is `pup` |
 | `learning` | `false` | the learning mode (see "Learning mode"); anything but a boolean is `false` |
 | `learningPrompt` | `DEFAULT_LEARNING_PROMPT` | what the learning breakdown should hold (the user's own instruction); trimmed, capped at 1000 characters; blank or non-string falls back to the default |
 | `correctionPrompt` | `DEFAULT_CORRECTION_PROMPT` | what each correction note should hold in the learning mode; same handling as `learningPrompt` |
@@ -365,13 +366,14 @@ Closing:
 
 On close, the port to background is disconnected and any unfinished API request is cancelled.
 
-## Companion (content/hero.js, content/pup.js, cat.js, corgi.js)
+## Companion (content/hero.js, content/pup.js, cat.js, corgi.js, monkey.js)
 
-A small pixel character keeps the reader company, so that SpotSlate has a face. The settings offer three, Spot by default, or none:
+A small pixel character keeps the reader company, so that SpotSlate has a face. The settings offer four, Spot by default, or none:
 
 - **Spot**, a shiba (`content/pup.js`): dances with a paw up, each paw in turn (`dance`, 4 frames at 7 fps), and stands with one blink (`idle`, 6 frames at 4 fps).
 - **Ink**, a black cat (`content/cat.js`) with yellow eyes: kneads with its eyes shut in a smile, one front paw and then the other (`dance`, 4 frames at 6 fps); sits with its tail swaying, a blink and an ear twitch (`idle`, 8 frames at 4 fps); now and then licks a paw and washes its face with it (`lick`, 16 frames at 6 fps) or yawns (`yawn`, 7 frames at 5 fps).
 - **Biscuit**, a corgi (`content/corgi.js`): turns its back and wiggles its round white rear from side to side (`dance`, 4 frames at 8 fps); sits panting with a blink (`idle`, 6 frames at 4 fps); now and then turns round to wiggle and back (`wiggle`, 9 frames at 8 fps).
+- **Momo**, a monkey (`content/monkey.js`): crouches and jumps with both hands up, grinning (`dance`, 4 frames at 7 fps); stands with one blink (`idle`, 6 frames at 4 fps); now and then throws both hands to its head and shakes, wide eyed, then lets go (`panic`, 6 frames at 6 fps).
 - **No one** (`none`): nothing comes by the mouse or onto the popup.
 
 The choice reaches open pages at once (`settings-changed`): the companion there goes and the new one comes where it should be (`setCompanion` in `main.js`). Until a page has the settings it shows no companion.
@@ -579,7 +581,7 @@ Unit tests (`node --test`, no dependencies):
 - `notes.js`: the update prompt (the language, the rules, current notes or "(none yet)", passages and translations in tags, oldest first; a passage cannot close its tag); `cleanNotes` (fences, quotes, headings, two paragraphs, the 700-character cut at a sentence or a space, empty); taking queued passages (newest first within the budget, in order); the notes block.
 - `selection.js`: `wordsAround` keeps 8 words on each side, stops at sentence boundaries, works for non-Latin scripts.
 - `errors.js`: every status in the table; a JSON body with `error.message`; a non-JSON body.
-- `pixels.js`, `pup.js`, `cat.js`, `corgi.js`: the companions in the settings are the heroes there are; every hero has a name, a dance and a rest that loop over several frames, and every dance moves; every frame fills the hero's size with transparent cells and palette colors; fidgets are animations of their own that end as the hero rests (Spot has none, the cat licks and yawns, the corgi wiggles); the corgi's dance is all from behind; `drawFrame` lays parts in order and cuts what falls outside.
+- `pixels.js`, `pup.js`, `cat.js`, `corgi.js`, `monkey.js`: the companions in the settings are the heroes there are; every hero has a name, a dance and a rest that loop over several frames, and every dance moves; every frame fills the hero's size with transparent cells and palette colors; fidgets are animations of their own that end as the hero rests (Spot has none, the cat licks and yawns, the corgi wiggles, the monkey grabs its head); the corgi's dance is all from behind; `drawFrame` lays parts in order and cuts what falls outside.
 - `compose.js`: the compose and correction prompts with and without the site context; counting languages; choosing the language to write in from the counts, and the language of the draft.
 - `correction.js`: reading the corrected text and its notes, also from an answer without the form; what changed, word by word, also in the longest drafts.
 - `sites.js`: the default mode; stored modes read with every value checked; setting one keeps the others, and the default leaves the list.
@@ -774,5 +776,6 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   174. Alt over a paragraph in the PDF reader translates the whole paragraph (both its lines), not a single line, the neighbouring paragraph, or the whole page.
   175. The toolbar popup's document button opens the PDF reader (`pdf.html`) in a new tab.
   176. The compose window's Report link opens a comment field; sending it opens the GitHub issue with the setup and the comment, keeps the text off the URL, and copies the draft and the result to the clipboard.
+  177. The monkey companion (Momo) jumps by the mouse, and now and then, resting, grabs its head (the `panic` fidget) before resting again.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

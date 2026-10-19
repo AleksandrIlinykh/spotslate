@@ -21,7 +21,7 @@ declare namespace SpotSlate {
   /** Who translates: an AI provider called by background, or Chrome's translator on the page itself. */
   type Engine = 'api' | 'browser';
   /** A companion in the settings: a key of `heroes`, or none. */
-  type Companion = 'pup' | 'cat' | 'corgi' | 'none';
+  type Companion = 'pup' | 'cat' | 'corgi' | 'monkey' | 'none';
 
   /** A shortcut by its modifiers and its physical key (KeyA..KeyZ, Digit0..Digit9), so it works in any layout. */
   interface Shortcut {

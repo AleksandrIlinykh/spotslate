@@ -43,6 +43,7 @@
         "content/pup.js",
         "content/cat.js",
         "content/corgi.js",
+        "content/monkey.js",
         "content/hero.js",
         "content/main.js"
       ],

@@ -13,8 +13,8 @@ export const DEFAULTS = Object.freeze({
   correctionPrompt: DEFAULT_CORRECTION_PROMPT,
 });
 
-// The companions to choose from (content/pup.js, cat.js, corgi.js); 'none' in the settings means no companion.
-export const COMPANIONS = Object.freeze(['pup', 'cat', 'corgi']);
+// The companions to choose from (content/pup.js, cat.js, corgi.js, monkey.js); 'none' in the settings means no companion.
+export const COMPANIONS = Object.freeze(['pup', 'cat', 'corgi', 'monkey']);
 
 export const LANGUAGES = Object.freeze({
   ru: 'Russian',

@@ -151,6 +151,31 @@ test('now and then, resting on the popup, the cat licks itself, then rests again
   await expect(hero(page)).toHaveAttribute('data-play', 'idle', { timeout: 15_000 });
 });
 
+test('the monkey companion jumps by the mouse', async ({ page, server, setSettings }) => {
+  await setSettings({ companion: 'monkey' });
+  await page.goto(`${server.url}/page.html`);
+  await page.mouse.move(60, 150);
+  await page.keyboard.down('Alt');
+  await expect(hero(page)).toHaveAttribute('data-hero', 'Momo');
+  await expect(hero(page)).toHaveAttribute('data-play', 'dance');
+  await expect.poll(() => heroBox(page)).toEqual({ x: 72, y: 166, width: 32, height: 32 });
+});
+
+test('now and then, resting, the monkey grabs its head, then rests again', async ({ page, server, setSettings }) => {
+  test.slow(); // the monkey takes its time
+  await setSettings({ companion: 'monkey' });
+  await page.goto(`${server.url}/page.html`);
+  await inContentScript(page, 'Math.random = () => 0'); // the shortest pause, and the first of its fidgets
+  await altHover(page, '#p1');
+  await expect(hero(page)).toHaveAttribute('data-hero', 'Momo');
+  await expect(popupText(page)).toContainText('[RU]');
+  await page.keyboard.up('Alt');
+  await expect(hero(page)).toHaveAttribute('data-play', 'idle');
+  await expect(hero(page)).toHaveAttribute('data-play', 'panic', { timeout: 15_000 });
+  await expect(hero(page)).toHaveAttribute('data-mood', 'idle');
+  await expect(hero(page)).toHaveAttribute('data-play', 'idle', { timeout: 15_000 });
+});
+
 test('with reduced motion the cat keeps still, without its fidgets', async ({ page, server, setSettings }) => {
   test.slow();
   await page.emulateMedia({ reducedMotion: 'reduce' });
