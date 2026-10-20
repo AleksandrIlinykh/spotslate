@@ -288,7 +288,9 @@
         render(null);
         return;
       }
-      const text = cue.innerText.trim();
+      // Collapse whitespace (a caption shown in two visual lines has a newline between them) exactly as parseTimedText
+      // does, so a DOM line and the same timeline cue make the same cache key and the look-ahead warming is a hit.
+      const text = cue.innerText.replace(/\s+/g, ' ').trim();
       if (!text) {
         currentText = '';
         render(null);

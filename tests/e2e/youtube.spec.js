@@ -70,6 +70,16 @@ test('dual subtitles: the video context is distilled from the metadata, then rid
     .toBe(true);
 });
 
+test('dual subtitles: a two-line caption is sent as one collapsed line, so a look-ahead cue matches its cache key', async ({ page, server }) => {
+  await page.goto(`${server.url}/youtube-captions.html`); // its caption is two visual lines
+  await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person');
+  // The newline between the two visual lines is collapsed to a space before translating (as parseTimedText does for a
+  // cue), so the DOM line and the same timeline cue make the same cache key and look-ahead is a hit, not a miss.
+  expect(
+    server.requests.some((request) => JSON.stringify(request.body).includes('What you have there is a person of extraordinary talent')),
+  ).toBe(true);
+});
+
 test('dual subtitles: a timedtext timeline warms the upcoming lines, so the shown line is ready without lag', async ({ page, server }) => {
   await page.goto(`${server.url}/youtube-timeline.html`);
   // Hand over a cue timeline, as content/youtube-timedtext.js would from the player's /api/timedtext response.
