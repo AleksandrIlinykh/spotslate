@@ -4,6 +4,7 @@ import '../../extension/content/pixels.js';
 import '../../extension/content/pup.js';
 import '../../extension/content/cat.js';
 import '../../extension/content/corgi.js';
+import '../../extension/content/monkey.js';
 import { COMPANIONS } from '../../extension/lib/settings.js';
 
 const { heroes } = globalThis.spotslate;
@@ -12,7 +13,7 @@ const distinct = (frames) => new Set(frames.map((rows) => rows.join('\n'))).size
 
 test('the companions to choose from are the heroes there are', () => {
   assert.deepEqual(Object.keys(heroes).sort(), [...COMPANIONS].sort());
-  assert.deepEqual(COMPANIONS, ['pup', 'cat', 'corgi']);
+  assert.deepEqual(COMPANIONS, ['pup', 'cat', 'corgi', 'monkey']);
 });
 
 test('every hero has a dance and a rest, each a loop of frames, and a name', () => {
@@ -60,6 +61,7 @@ test('Spot keeps to its dance and rest, the cat licks itself and yawns, the corg
   assert.equal(heroes.pup.fidgets, undefined);
   assert.deepEqual(heroes.cat.fidgets, ['lick', 'yawn']);
   assert.deepEqual(heroes.corgi.fidgets, ['wiggle']);
+  assert.deepEqual(heroes.monkey.fidgets, ['panic']);
 });
 
 test('the corgi dances with its back turned, so none of its dance looks like its rest', () => {
