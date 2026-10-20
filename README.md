@@ -11,12 +11,14 @@ SpotSlate is for deliberate, in-context translation of just the part you need: r
 What it does:
 
 - **Read**: the translation of a paragraph, a selection or a few words (a short dictionary entry) appears right by the text, which stays outlined and joined to the popup by a dashed line.
+- **Subtitles on YouTube**: turn on YouTube's own captions and SpotSlate adds a translated line above each one, a little smaller and tinted; with an AI provider it keeps to the video's own subject and terms.
+- **PDF reader**: open a local PDF in SpotSlate's own reader from the toolbar window, and translate its paragraphs where you read them.
 - **Write**: a window by any text field turns what you write in your language into the page's language, to copy and paste.
 - **Practise**: with the same language on both sides, the window corrects your own text instead and explains each mistake.
 - **Learn the site**: with an AI provider, each site gets a short context of its subject and terms, so they come out the same way every time.
 - **Your choice of engine**: Chrome's built-in translator (free, nothing leaves your computer) or an AI model of your own, under your own key.
 - **Per site**: turn SpotSlate off, or keep a site to Chrome's translator, from the toolbar window.
-- **A companion**: Spot the shiba, Ink the black cat or Biscuit the corgi keeps you company by the mouse and on the translation, or no one; pick in the settings.
+- **A companion**: Spot the shiba, Ink the black cat, Biscuit the corgi or Momo the monkey keeps you company by the mouse and on the translation, or no one; pick in the settings.
 
 Keys and gestures out of the box (on a Mac, Alt is Option):
 
@@ -93,7 +95,11 @@ The full [privacy policy](PRIVACY.md) explains it in detail. With the built-in t
 - One SpotSlate window at a time: a translation popup puts the compose window away (your draft stays), and the compose window closes the popup.
 - A text translated once is reused in every tab until the browser closes: instant and free.
 - SpotSlate speaks the language you translate into: its hints, buttons, errors and windows follow the "Translate into" setting.
-- A little pixel companion keeps you company: it dances next to the mouse while you hold Alt, sits down when the translation is ready, and hops onto the popup when you let Alt go. Spot the shiba dances with a paw up; Ink the black cat kneads, and now and then licks a paw, washes its face or yawns; Biscuit the corgi turns round and wiggles its rear. Pick one, or no one, under "Companion" in the settings. It never gets in the way of the mouse, and stands still if your system asks for reduced motion.
+- A little pixel companion keeps you company: it dances next to the mouse while you hold Alt, sits down when the translation is ready, and hops onto the popup when you let Alt go. Spot the shiba dances with a paw up; Ink the black cat kneads, and now and then licks a paw, washes its face or yawns; Biscuit the corgi turns round and wiggles its rear; Momo the monkey jumps and grabs its head. Pick one, or no one, under "Companion" in the settings. It never gets in the way of the mouse, and stands still if your system asks for reduced motion.
+
+## Subtitles on YouTube
+
+Turn on YouTube's own captions (the CC button) and SpotSlate adds their translation on a line above each one, a little smaller and in a warm tint, so the video reads in two languages at once. There is nothing to set up: the captions are the switch, so turning them off stops it. A translation takes a moment, so a quiet preloader holds the line until it lands, and the line sits above the caption, not below, so the original never jumps. With an AI provider, SpotSlate keeps a short context for the video (its subject, names and terms), built from its title, channel and description and refined from the first lines it sees, so the subtitles stay consistent; it is per video, and apart from the site context. With Chrome's translator the captions are translated on your computer and nothing is sent. Only while captions show, and only the lines of the video you are watching.
 
 ## On a site of your own
 
