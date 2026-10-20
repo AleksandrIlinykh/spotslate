@@ -23,16 +23,22 @@ test('in fullscreen the caption popup shows in the top layer, over the video', a
   expect(await popupHost(page).evaluate((h) => h.matches(':popover-open'))).toBe(true);
 });
 
-test('dual subtitles: a translation line is added above the native caption while it shows', async ({ page, server }) => {
+test('dual subtitles: the translation shows above the caption, in our own overlay outside the caption DOM', async ({ page, server }) => {
   await page.goto(`${server.url}/youtube-captions.html`);
   const sub = page.locator('.spotslate-sub');
   await expect(sub).toContainText('[RU] What you have there is a person');
   await expect(sub).toContainText('of extraordinary talent');
-  // The translation is a sibling above the native caption, so the native line below stays put and still reads the original.
+  // The native caption is untouched (our line is a separate overlay in the player, not inside YouTube's caption box),
+  // so the line being read never moves because of us.
   await expect(page.locator('.captions-text')).not.toContainText('[RU]');
-  expect(
-    await page.evaluate(() => document.querySelector('.captions-text').previousElementSibling?.classList.contains('spotslate-sub')),
-  ).toBe(true);
+  expect(await page.evaluate(() => !!document.querySelector('#movie_player > .spotslate-sub'))).toBe(true);
+  expect(await page.evaluate(() => !!document.querySelector('.caption-window .spotslate-sub'))).toBe(false);
+  const above = await page.evaluate(() => {
+    const s = document.querySelector('.spotslate-sub').getBoundingClientRect();
+    const n = document.querySelector('.captions-text').getBoundingClientRect();
+    return s.bottom <= n.top + 1;
+  });
+  expect(above, 'the translation sits above the native caption').toBe(true);
 });
 
 test('dual subtitles: a preloader holds the line while the translation is on its way', async ({ page, server, setSettings }) => {
