@@ -23,13 +23,24 @@ test('in fullscreen the caption popup shows in the top layer, over the video', a
   expect(await popupHost(page).evaluate((h) => h.matches(':popover-open'))).toBe(true);
 });
 
-test('dual subtitles: a translation line is added under the native caption while it shows', async ({ page, server }) => {
+test('dual subtitles: a translation line is added above the native caption while it shows', async ({ page, server }) => {
   await page.goto(`${server.url}/youtube-captions.html`);
   const sub = page.locator('.spotslate-sub');
   await expect(sub).toContainText('[RU] What you have there is a person');
   await expect(sub).toContainText('of extraordinary talent');
-  // The translation is a sibling under the native caption, so the native line still reads the original.
+  // The translation is a sibling above the native caption, so the native line below stays put and still reads the original.
   await expect(page.locator('.captions-text')).not.toContainText('[RU]');
+  expect(
+    await page.evaluate(() => document.querySelector('.captions-text').previousElementSibling?.classList.contains('spotslate-sub')),
+  ).toBe(true);
+});
+
+test('dual subtitles: a preloader holds the line while the translation is on its way', async ({ page, server, setSettings }) => {
+  await setSettings({ apiKey: 'slow' }); // one chunk per second, so the preloader is up long enough to see
+  await page.goto(`${server.url}/youtube-captions.html`);
+  await expect(page.locator('.spotslate-sub .spotslate-sub-wait')).toBeVisible();
+  await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person');
+  await expect(page.locator('.spotslate-sub .spotslate-sub-wait')).toHaveCount(0); // gone once the text lands
 });
 
 test('dual subtitles follow the caption: a new cue gets its own translation, with no leftover line', async ({ page, server }) => {
