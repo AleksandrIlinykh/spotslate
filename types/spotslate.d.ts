@@ -444,6 +444,13 @@ declare namespace SpotSlate {
     wake(): void;
     hide(): void;
   }
+
+  /** Dual subtitles on YouTube (content/youtube.js `createCaptions`). */
+  interface Captions {
+    /** Starts (or re-targets) watching the player; `translate(text)` resolves with the line's translation. */
+    start(options: { translate: (text: string) => Promise<string>; targetLang: Lang }): void;
+    stop(): void;
+  }
 }
 
 /**
@@ -542,6 +549,8 @@ interface SpotSlate {
   drawHero(hero: SpotSlate.Hero, host: HTMLElement, options?: { scale?: number }): SpotSlate.DrawnHero;
   /** content/hero.js: the companion by the mouse and on the popup; `spot()` says where it should be. */
   createHero(hero: SpotSlate.Hero, spot: () => SpotSlate.HeroSpot): SpotSlate.CompanionOnPage;
+  /** content/youtube.js: dual subtitles on YouTube (a translation line under each native caption). */
+  createCaptions(): SpotSlate.Captions;
 }
 
 // Each content script adds its part when it runs, so the members are there only after their script.

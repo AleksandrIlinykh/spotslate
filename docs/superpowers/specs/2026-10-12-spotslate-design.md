@@ -71,7 +71,7 @@ spotslate/
       corgi.js          heroes.corgi: Biscuit, a corgi
       monkey.js         heroes.monkey: Momo, a monkey
       hero.js           drawHero(hero, host, options), createHero(hero, spot): a companion drawn, by the mouse and on the popup
-      youtube.js        markCaptionBlock(element): on YouTube, mark the caption cue as one translatable block
+      youtube.js        markCaptionBlock(element): mark the caption cue as one block; createCaptions(): dual subtitles
       main.js           trigger, what to translate, talking to background, closing, page cache, Alt+click and Alt+T
     compose.html        the toolbar popup: the compose window on its own
     compose-page.js
@@ -495,6 +495,15 @@ Chrome's built-in PDF viewer renders text through PDFium with no DOM, so SpotSla
 - The vendored worker is a module worker loaded from a packaged file; pdf.js's optional WASM needs `'wasm-unsafe-eval'`, which Chrome's MV3 `extension_pages` CSP already allows. Inline scripts are blocked by that CSP, so `pdf.html` loads `pdf-view.js` as an external module. pdf.js is excluded from the type check (`jsconfig.json`), and its files carry `// @ts-nocheck`.
 - The package grows by about 1.7 MB (pdf.js).
 
+## Dual subtitles (YouTube, content/youtube.js)
+
+While YouTube's captions show, SpotSlate adds their translation right under them, so the video reads in two languages at once. The user's own CC button is the switch: with no captions showing there is nothing to translate, so nothing is added, and no setting is needed.
+
+- `createCaptions` (content/youtube.js) returns a controller `main.js` drives. `applyCaptions` in `main.js` starts it when the settings are known, the site is not off, and the page has a `#movie_player` (so it does nothing off a video page), and stops it otherwise; it is re-checked on `yt-navigate-finish` (YouTube is one page and rebuilds the player between videos).
+- Started, it watches the document for the caption window (a `MutationObserver`, only while running). For each cue it reads the native text of `.ytp-caption-window-container .captions-text`, waits `250 ms` for the text to settle (auto-captions stream word by word), translates it, and adds a `.spotslate-sub` line as a sibling right after `.captions-text`, inside the caption window: it sits in the same box and keeps the native font (its size is copied from a `.ytp-caption-segment`), placement and fullscreen behaviour, with the original on top and the translation under it. One line per cue (an existing one is reused), removed when the cue goes.
+- Only the lines of the video being watched are sent, and only while captions show. Each line is translated through `translateLine` in `main.js` (Chrome's translator on the page, or a short-lived `translate` port to the provider) and cached by `{targetLang, text}`, so a repeat or a seek costs nothing. Changing the target language clears the open cue so it is translated again.
+- v1 limits: the current cue is translated when it appears (no look-ahead), there is no "translation only" mode, and the text comes from the live caption DOM (not the timedtext response).
+
 ## Cache
 
 In `content/main.js`: a `Map` from `[mode, text, context]` to translation, at most 100 entries (the oldest is evicted). Only successfully finished translations are stored. The cache is cleared when the settings change (the `settings-changed` message from background).
@@ -781,5 +790,6 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   177. The monkey companion (Momo) jumps by the mouse, and now and then, resting, grabs its head (the `panic` fidget) before resting again.
   178. Alt over a YouTube caption translates the whole current caption (`.captions-text`, all its visual lines), not just the visual row under the pointer.
   179. In a real fullscreen (the block inside `document.fullscreenElement`) the popup is shown in the top layer (a `:popover-open` host), so it paints over the fullscreen video.
+  180. While a YouTube caption shows, a `.spotslate-sub` translation line is added under the native caption (the original stays in `.captions-text`); a new cue gets its own translation and leaves no second line behind.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

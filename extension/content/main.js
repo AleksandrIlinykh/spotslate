@@ -21,6 +21,7 @@
     createHighlight,
     createComposeWindow,
     createHero,
+    createCaptions,
     heroes,
     t,
   } = globalThis.spotslate;
@@ -46,6 +47,7 @@
   });
   const highlight = createHighlight();
   const composeWindow = createComposeWindow();
+  const captions = createCaptions();
 
   let mouseX = null;
   let mouseY = null;
@@ -115,6 +117,7 @@
     engine = siteMode.local ? 'browser' : settingsEngine;
     popup.setLanguage(targetLang, languages);
     popup.setContext(engine === 'api' && !siteMode.noContext, providerName);
+    applyCaptions();
     if (!siteMode.off) return;
     releaseReadKey();
     closePopup();
@@ -327,6 +330,45 @@
     if (request.mode === 'text') chrome.runtime.sendMessage({ type: 'read-lang', lang: result.source }).catch(() => {});
   }
 
+  // Translates one short line (a caption) into the target language, resolving with the whole translation (no popup).
+  // With Chrome's translator it stays on the page; with an AI provider it goes over its own short-lived port.
+  function translateLine(text) {
+    if (engine === 'browser') return translateInBrowser(text, targetLang, { sample: text }).then((result) => result.text ?? '');
+    return new Promise((resolve) => {
+      let conn;
+      try {
+        conn = chrome.runtime.connect({ name: 'translate' });
+      } catch {
+        resolve('');
+        return;
+      }
+      let result = '';
+      conn.onMessage.addListener((/** @type {SpotSlate.PortAnswer} */ message) => {
+        // Resolve here, not on disconnect: a port's own onDisconnect does not fire when this side disconnects it.
+        if (message.type === 'chunk') result += message.text;
+        else if (message.type === 'done') {
+          conn.disconnect();
+          resolve(result.trim());
+        } else if (message.type === 'error') {
+          conn.disconnect();
+          resolve('');
+        }
+      });
+      conn.onDisconnect.addListener(() => resolve(result.trim())); // background dropped the port
+      conn.postMessage({ text, mode: 'text', lang: sourceLanguage(detectedBefore(text)) });
+    });
+  }
+
+  // Dual subtitles run on a video page with a player, while the site is on. The user's own CC button turns the captions
+  // on and off; with none showing there is nothing to translate.
+  function applyCaptions() {
+    if (settingsKnown && !siteMode.off && document.querySelector('#movie_player')) {
+      captions.start({ translate: translateLine, targetLang });
+    } else {
+      captions.stop();
+    }
+  }
+
   // The compose window at a field or by the mouse (`anchor`, see createComposeWindow): what to write is translated into
   // the page's language, to copy.
   async function openCompose(anchor) {
@@ -537,6 +579,9 @@
   addEventListener('fullscreenchange', () => {
     if (popup.isOpen()) closePopup();
   });
+
+  // YouTube is a single page: moving to another video rebuilds the player, so re-check whether dual subtitles run.
+  document.addEventListener('yt-navigate-finish', () => applyCaptions());
 
   const ownsFocusNode = (node) => popup.isOwn(node) || composeWindow.isOwn(node);
   for (const type of ['focusin', 'focusout']) {
