@@ -67,6 +67,14 @@
 
     const captionsEl = () => document.querySelector('.ytp-caption-window-container .captions-text');
 
+    // While an ad plays, YouTube marks the player `ad-showing`/`ad-interrupting` and may show the ad's own captions.
+    // Those are not the video, so they are not translated (it would waste a request and clutter the ad). The player
+    // API that would say this (getAdState) lives in the page's own world, out of reach, but the class is in the DOM.
+    const adShowing = () => {
+      const player = document.querySelector('#movie_player');
+      return !!player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'));
+    };
+
     function injectStyle() {
       if (styled) return;
       styled = true;
@@ -93,7 +101,7 @@
     function place() {
       const player = document.querySelector('#movie_player');
       const cue = captionsEl();
-      if (!player || !(cue instanceof HTMLElement) || !cue.isConnected) {
+      if (!player || adShowing() || !(cue instanceof HTMLElement) || !cue.isConnected) {
         if (overlay) overlay.style.display = 'none';
         return;
       }
@@ -157,6 +165,12 @@
     }
 
     async function sync() {
+      if (adShowing()) {
+        // An ad is playing: drop any line and translate nothing until the video is back.
+        currentText = '';
+        render(null);
+        return;
+      }
       const cue = captionsEl();
       if (!(cue instanceof HTMLElement)) {
         currentText = '';

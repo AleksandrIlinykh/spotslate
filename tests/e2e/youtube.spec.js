@@ -70,6 +70,27 @@ test('dual subtitles: the video context is distilled from the metadata, then rid
     .toBe(true);
 });
 
+test('dual subtitles: an ad caption is not translated while the ad shows', async ({ page, server }) => {
+  await page.goto(`${server.url}/youtube-captions.html`);
+  await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person');
+  // An ad starts: YouTube marks the player `ad-showing` and the ad shows its own caption.
+  await page.evaluate(() => {
+    document.querySelector('#movie_player').classList.add('ad-showing');
+    const cue = document.querySelector('.captions-text');
+    const visual = document.createElement('span');
+    visual.className = 'caption-visual-line';
+    const seg = document.createElement('span');
+    seg.className = 'ytp-caption-segment';
+    seg.textContent = 'buy now from our sponsor';
+    visual.append(seg);
+    cue.replaceChildren(visual);
+  });
+  // The overlay clears and the ad caption is never sent to translate.
+  await expect(page.locator('.spotslate-sub')).toBeHidden();
+  await expect(page.locator('.spotslate-sub')).not.toContainText('buy now');
+  expect(server.requests.some((request) => JSON.stringify(request.body).includes('buy now from our sponsor'))).toBe(false);
+});
+
 test('dual subtitles: while the next line is translating, the previous one dims rather than vanishing', async ({ page, server, setSettings }) => {
   await setSettings({ apiKey: 'slow' }); // slow, so the next translation stays pending long enough to observe the dim
   await page.goto(`${server.url}/youtube-captions.html`);
