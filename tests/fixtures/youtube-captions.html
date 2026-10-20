@@ -25,5 +25,11 @@
       </div>
     </div>
   </div>
+  <button id="go-fs" style="position: fixed; top: 4px; left: 4px;">fullscreen</button>
+  <script>
+    document.getElementById('go-fs').addEventListener('click', () => {
+      document.getElementById('movie_player').requestFullscreen().catch(() => {});
+    });
+  </script>
 </body>
 </html>

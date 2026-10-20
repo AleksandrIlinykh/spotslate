@@ -532,6 +532,12 @@
   // whole document is watched in the capture phase, before the page's own handlers, and any focus event that moves
   // into or out of our popup or compose window is kept from the page. The focus itself still moves; only the page's
   // listeners are spared, so they do not pull it back.
+  // Entering or leaving fullscreen changes the layout entirely (and the top layer); a popup placed for the old one no
+  // longer fits, so close it and let the user point again.
+  addEventListener('fullscreenchange', () => {
+    if (popup.isOpen()) closePopup();
+  });
+
   const ownsFocusNode = (node) => popup.isOwn(node) || composeWindow.isOwn(node);
   for (const type of ['focusin', 'focusout']) {
     addEventListener(

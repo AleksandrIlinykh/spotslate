@@ -237,6 +237,7 @@
     let offset = { x: 0, y: 0 }; // popup position relative to the block, in viewport pixels
     let detached = false; // dragged or resized: fixed on screen instead of attached to the block
     let sized = false; // resized: explicit width and height instead of fitting the text
+    let topLayer = false; // the block is inside a fullscreen element: shown in the top layer to paint over it
 
     // The buttons in `lang`.
     function label() {
@@ -307,8 +308,11 @@
     }
 
     function place(viewportLeft, viewportTop) {
-      host.style.setProperty('top', `${viewportTop + window.scrollY}px`, 'important');
-      host.style.setProperty('left', `${viewportLeft + window.scrollX}px`, 'important');
+      // In the top layer the host is fixed, so its coordinates are the viewport's, without the scroll offset.
+      const scrollX = topLayer ? 0 : window.scrollX;
+      const scrollY = topLayer ? 0 : window.scrollY;
+      host.style.setProperty('top', `${viewportTop + scrollY}px`, 'important');
+      host.style.setProperty('left', `${viewportLeft + scrollX}px`, 'important');
     }
 
     function position() {
@@ -429,13 +433,28 @@
         sized = false;
         popupEl.style.width = '';
         popupEl.style.height = '';
-        host.style.setProperty('position', 'absolute', 'important');
+        // In a real fullscreen (e.g. the YouTube player) only the fullscreen element's subtree paints, so the popup,
+        // appended to the document, would be hidden. When the block is inside the fullscreen element, show the host in
+        // the top layer (a manual popover), which paints above it; its coordinates are then the viewport's (fixed).
+        const fullscreen = document.fullscreenElement;
+        topLayer = Boolean(fullscreen && fullscreen !== document.documentElement && fullscreen.contains(block));
+        host.style.setProperty('position', topLayer ? 'fixed' : 'absolute', 'important');
         side = chooseSide(block.getBoundingClientRect());
         popupEl.classList.remove('is-pinned', 'is-dragging');
         render('…', { loading: true });
         popupEl.style.maxWidth = '';
         setContextOpen(false); // the context is there to look at, not to keep open
         document.documentElement.append(host);
+        if (topLayer) {
+          host.setAttribute('popover', 'manual');
+          try {
+            host.showPopover();
+          } catch {
+            // already shown, or popovers unsupported: the host still renders as a positioned element
+          }
+        } else {
+          host.removeAttribute('popover');
+        }
         bodyEl.scrollTop = 0;
         position();
       },
