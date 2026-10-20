@@ -38,6 +38,8 @@
   function createCaptions() {
     /** @type {(text: string) => Promise<string>} */
     let translate = async () => '';
+    /** @type {(text: string) => void} */
+    let onCue = () => {};
     let targetLang = 'en';
     let observer = null;
     let styled = false;
@@ -104,6 +106,7 @@
       const text = native.innerText.trim();
       if (!text || text === currentText) return;
       currentText = text;
+      onCue(text); // tell main.js a new cue showed, so it can build the video's context from the lines seen
       const key = `${targetLang}\n${text}`;
       const cached = cache.get(key);
       if (cached !== undefined) {
@@ -127,9 +130,11 @@
     }
 
     return {
-      // Starts watching the player for captions (idempotent); `translate(text)` returns the line's translation.
+      // Starts watching the player for captions (idempotent); `translate(text)` returns the line's translation, and
+      // `onCue(text)` (optional) is told each new cue, so main.js can build the video's context.
       start(options) {
         translate = options.translate;
+        onCue = options.onCue ?? (() => {});
         if (options.targetLang !== targetLang) {
           targetLang = options.targetLang;
           currentText = ''; // the open cue must be translated again, into the new language

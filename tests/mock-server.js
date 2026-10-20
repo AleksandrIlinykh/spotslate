@@ -60,10 +60,11 @@ async function handle(req, res, records, state) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  const pathname = req.url.split('?')[0]; // a fixture may carry a query (a YouTube ?v= video id), served the same
   if (req.method === 'OPTIONS') {
     res.writeHead(204).end();
-  } else if (req.method === 'GET' && /^\/[\w-]+\.html$/.test(req.url)) {
-    const html = await readFile(new URL(req.url.slice(1), FIXTURES));
+  } else if (req.method === 'GET' && /^\/[\w-]+\.html$/.test(pathname)) {
+    const html = await readFile(new URL(pathname.slice(1), FIXTURES));
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(html);
   } else if (req.method === 'GET' && req.url === '/models') {
     listModels(req, res);

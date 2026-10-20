@@ -43,6 +43,27 @@ test('dual subtitles: a preloader holds the line while the translation is on its
   await expect(page.locator('.spotslate-sub .spotslate-sub-wait')).toHaveCount(0); // gone once the text lands
 });
 
+test('dual subtitles: the video context is distilled from the metadata, then rides with the captions as notes', async ({ page, server, serviceWorker }) => {
+  await page.goto(`${server.url}/youtube-video.html?v=testvideo`);
+  // The first cue starts a context build from the page metadata: a non-streamed request carrying the title and metadata.
+  await expect.poll(() => server.notesRequests.length).toBeGreaterThan(0);
+  const build = server.notesRequests.at(-1);
+  expect(build.body.stream).not.toBe(true);
+  expect(build.body.messages.at(-1).content).toContain('Intro to Kafka');
+  expect(build.body.messages.at(-1).content).toContain('<video>');
+  // Once background has stored this video's context, a later caption carries it as the notes of its translation.
+  await expect
+    .poll(() => serviceWorker.evaluate(() => chrome.storage.session.get('vctx:testvideo').then((o) => o['vctx:testvideo'] ?? '')))
+    .not.toBe('');
+  await page.evaluate(() => {
+    document.querySelector('.captions-text').innerHTML =
+      '<span class="caption-visual-line"><span class="ytp-caption-segment">partitions and offsets</span></span>';
+  });
+  await expect
+    .poll(() => server.requests.some((request) => request.body.messages.some((message) => typeof message.content === 'string' && message.content.includes('<notes>'))))
+    .toBe(true);
+});
+
 test('dual subtitles follow the caption: a new cue gets its own translation, with no leftover line', async ({ page, server }) => {
   await page.goto(`${server.url}/youtube-captions.html`);
   await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person');

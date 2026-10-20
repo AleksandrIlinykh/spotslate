@@ -34,6 +34,7 @@
   const PAGE_SAMPLE_CHARS = 1000;
   const DEFAULT_LANG = 'en'; // until background answers with the language from the settings
   const SETUP_CODES = new Set(['no_key', 'no_model', 'no_url', 'insecure_url']); // setupProblem() in lib/providers.js: fixed in the settings
+  const VIDEO_REFINE_AT = [15, 40]; // caption lines seen before each bounded refresh of the video's subtitle context
 
   const cache = new Map(); // [mode, text, context] -> translation, for this page
   const sameLanguage = new Map(); // text -> whether it is already in the target language
@@ -72,6 +73,12 @@
   let localTicket = 0; // the on-page translation in progress; a new translation or a close makes it stale
   let modelAsked = false; // whether this page has asked Chrome to get its translation model ready
   let settingsKnown = false; // whether background has answered with the settings below
+  // The YouTube video being watched. Background distils its subtitle context from the video's metadata when captions
+  // start, refines it a couple of times from the lines seen (VIDEO_REFINE_AT), and keeps it by id; each caption
+  // translation carries the id so background uses that video's context. Reset when the video changes.
+  let videoId = '';
+  let videoCues = [];
+  let videoRefines = 0;
   let languages = null; // the languages SpotSlate translates into, in the order of the settings
   let companion = null; // the companion chosen in the settings: a hero's name in `heroes`, or 'none'
   let hero = null; // createHero() for it, none until the settings are here
@@ -355,15 +362,51 @@
         }
       });
       conn.onDisconnect.addListener(() => resolve(result.trim())); // background dropped the port
-      conn.postMessage({ text, mode: 'text', lang: sourceLanguage(detectedBefore(text)) });
+      conn.postMessage({ text, mode: 'text', videoId, lang: sourceLanguage(detectedBefore(text)) });
     });
+  }
+
+  // The watched video's metadata, read from the page DOM (getPlayerResponse lives in the page's own world, out of our
+  // reach): what background distils the subtitle context from.
+  function videoMeta() {
+    const read = (selector) => document.querySelector(selector)?.textContent?.trim() ?? '';
+    return {
+      title: read('h1.ytd-watch-metadata, #title h1, h1.title') || document.title.replace(/ - YouTube$/, ''),
+      channel: read('ytd-channel-name#channel-name a, #owner #channel-name a, ytd-channel-name a'),
+      description: read('#description-inline-expander, ytd-text-inline-expander, #description').slice(0, 2000),
+    };
+  }
+
+  function requestVideoContext(lines) {
+    // Fire and forget: background stores the context by id and reads it when a caption is translated, so the captions
+    // translate whether or not this answers. A failure means the extension was updated or there is no context to build.
+    chrome.runtime.sendMessage({ type: 'video-context', videoId, meta: videoMeta(), lines }).catch(() => {});
+  }
+
+  // Each caption line, as createCaptions settles it. The first line of a new video starts its context (from metadata);
+  // a couple of later lines refine it, then it is left alone. Only with an AI provider, which the context helps.
+  function onCaptionCue(text) {
+    if (engine !== 'api' || siteMode.noContext) return;
+    const id = new URL(location.href).searchParams.get('v') ?? '';
+    if (id !== videoId) {
+      videoId = id;
+      videoCues = [];
+      videoRefines = 0;
+      if (videoId) requestVideoContext([]);
+    }
+    if (!videoId) return;
+    videoCues.push(text);
+    if (videoRefines < VIDEO_REFINE_AT.length && videoCues.length >= VIDEO_REFINE_AT[videoRefines]) {
+      videoRefines++;
+      requestVideoContext(videoCues.slice(-30));
+    }
   }
 
   // Dual subtitles run on a video page with a player, while the site is on. The user's own CC button turns the captions
   // on and off; with none showing there is nothing to translate.
   function applyCaptions() {
     if (settingsKnown && !siteMode.off && document.querySelector('#movie_player')) {
-      captions.start({ translate: translateLine, targetLang });
+      captions.start({ translate: translateLine, targetLang, onCue: onCaptionCue });
     } else {
       captions.stop();
     }

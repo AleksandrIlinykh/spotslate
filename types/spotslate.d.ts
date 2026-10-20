@@ -185,6 +185,8 @@ declare namespace SpotSlate {
     | { type: 'notes'; site?: Site }
     /** Forgets the site's context. From the context panel's Clear. */
     | { type: 'clear-notes'; site?: Site }
+    /** A YouTube video's subtitle context, by id; answered with `{ text }`. From content/main.js when captions run. */
+    | { type: 'video-context'; videoId: string; meta: VideoMeta; lines: string[] }
     /** Opens a GitHub issue with the setup and the user's comment (never the text). From the popup or the composer. */
     | { type: 'report'; mode: 'text' | 'dictionary' | 'compose' | 'correction'; comment?: string }
     /** The language of a text Chrome's translator translated on the page, counted for the compose window. */
@@ -218,6 +220,8 @@ declare namespace SpotSlate {
     mode: 'text' | 'dictionary';
     /** The words around a selected phrase, for a dictionary entry. */
     context: string;
+    /** A YouTube video id for a caption line: background uses that video's subtitle context, not the site notes. */
+    videoId?: string;
     /** Add a grammar breakdown: the learning mode, for a selected word or sentence. */
     learning: boolean;
     /** What the breakdown holds; set by background from the settings, never by the page. */
@@ -445,10 +449,20 @@ declare namespace SpotSlate {
     hide(): void;
   }
 
+  /** A watched YouTube video's metadata, read from the page DOM, that its subtitle context is distilled from. */
+  interface VideoMeta {
+    title: string;
+    channel: string;
+    description: string;
+  }
+
   /** Dual subtitles on YouTube (content/youtube.js `createCaptions`). */
   interface Captions {
-    /** Starts (or re-targets) watching the player; `translate(text)` resolves with the line's translation. */
-    start(options: { translate: (text: string) => Promise<string>; targetLang: Lang }): void;
+    /**
+     * Starts (or re-targets) watching the player; `translate(text)` resolves with the line's translation, and
+     * `onCue(text)` (optional) is told each new cue, so main.js can build the video's context.
+     */
+    start(options: { translate: (text: string) => Promise<string>; targetLang: Lang; onCue?: (text: string) => void }): void;
     stop(): void;
   }
 }

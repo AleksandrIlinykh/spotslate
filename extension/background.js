@@ -1,5 +1,5 @@
 import { buildMessages } from './lib/prompt.js';
-import { MIN_PASSAGE, buildNotesMessages, cleanNotes, passageOf, takePassages } from './lib/notes.js';
+import { MIN_PASSAGE, buildNotesMessages, buildVideoContextMessages, cleanNotes, passageOf, takePassages } from './lib/notes.js';
 import { buildComposeMessages, buildCorrectMessages, buildRephraseMessages, chooseComposeSource, chooseComposeTarget, countLanguage } from './lib/compose.js';
 import { readTextStream, sendChat } from './lib/chat.js';
 import { answerText, setupProblem } from './lib/providers.js';
@@ -21,6 +21,7 @@ const MAX_DRAFT = 3000;
 const MAX_INSTRUCTION = 200; // a rephrase instruction the user types; their own text, so a length cap is enough
 const MAX_REPORT_COMMENT = 1000; // the user's note on a bad result, carried in the issue URL
 const NOTES_PREFIX = 'notes:'; // + site: the site context, in chrome.storage.session
+const VCTX_PREFIX = 'vctx:'; // + YouTube video id: that video's subtitle context, in chrome.storage.session
 const LANGS_PREFIX = 'langs:'; // + site: { [lang]: count } of the texts read there, for the compose window
 const DRAFT_PREFIX = 'draft:'; // + site ('' off any site): the last draft written there, in chrome.storage.session
 const SITES_KEY = 'sites'; // { [site]: mode } in chrome.storage.local, see lib/sites.js
@@ -128,18 +129,21 @@ chrome.runtime.onConnect.addListener((port) => {
       compose(message, siteOf(port.sender, message.site), controller.signal, send);
       return;
     }
-    const { text, mode, context, learning, lang } = message;
+    const { text, mode, context, videoId, learning, lang } = message;
     if (typeof text !== 'string' || !text.trim()) return;
     const request = {
       text: text.slice(0, MAX_TEXT),
       mode: MODES.has(mode) ? mode : 'text',
       context: typeof context === 'string' ? context.slice(0, MAX_CONTEXT) : '',
+      videoId: typeof videoId === 'string' ? videoId.slice(0, 64) : '',
       learning: learning === true,
     };
     const site = siteOf(port.sender);
     watch(site, port.sender);
     translate(request, site, controller.signal, send, (translation, siteMode) => {
-      if (!site || request.mode !== 'text') return;
+      // A caption (it carries a video id) uses its video's context, not the site's, so it teaches neither the site
+      // notes nor the language counts.
+      if (!site || request.mode !== 'text' || request.videoId) return;
       countRead(site, lang);
       if (!siteMode.noContext) learn(site, request.text, translation);
     });
@@ -174,6 +178,10 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
   if (message?.type === 'clear-notes') {
     const site = siteOf(sender, message.site);
     if (site) clearNotes(site);
+  }
+  if (message?.type === 'video-context') {
+    videoContextFor(siteOf(sender), message).then(sendResponse);
+    return true; // the answer comes later
   }
   if (message?.type === 'report') openReport({ mode: message.mode, comment: message.comment });
   if (message?.type === 'read-lang') {
@@ -310,6 +318,39 @@ async function updateNotes(site) {
   state.controller = null;
   if (state.queue.length > 0) updateNotes(site);
   else announce(site, await notesOf(site), false);
+}
+
+// A YouTube video's subtitle context, kept for the session by video id. The content script asks for it a bounded
+// number of times: once from the video's metadata when captions start, then a couple of refinements from the lines
+// seen, never on every line (the timing of subtitles does not allow it). It rides with each caption translation as
+// its `context`. Only with an AI provider and only while the site keeps its context (`site-mode`).
+async function videoNoteOf(videoId) {
+  const key = VCTX_PREFIX + videoId;
+  return (await chrome.storage.session.get(key))[key] ?? '';
+}
+
+async function videoContextFor(site, { videoId, meta, lines }) {
+  if (typeof videoId !== 'string' || !videoId) return { text: '' };
+  const key = VCTX_PREFIX + videoId;
+  const current = (await chrome.storage.session.get(key))[key] ?? '';
+  try {
+    const settings = await loadSettings();
+    const provider = activeProvider(settings);
+    const siteMode = await modeOf(site);
+    const allowed = site && !siteMode.off && !siteMode.local && !siteMode.noContext;
+    if (provider.api === 'browser' || setupProblem(provider) || !allowed) return { text: '' };
+    const messages = buildVideoContextMessages(current, meta ?? {}, Array.isArray(lines) ? lines : [], LANGUAGES[settings.targetLang]);
+    const signal = AbortSignal.timeout(NOTES_TIMEOUT_MS);
+    const response = await sendChat(provider, { messages, stream: false, purpose: 'notes' }, signal);
+    const note = response.ok ? cleanNotes(answerText(await response.json())) : '';
+    if (note) {
+      await chrome.storage.session.set({ [key]: note });
+      return { text: note };
+    }
+  } catch {
+    // a timeout, a network error or a full session storage: the context is only a help
+  }
+  return { text: current };
 }
 
 async function clearNotes(site) {
@@ -500,7 +541,8 @@ async function translate(request, site, signal, send, onTranslated = () => {}) {
     return;
   }
 
-  const notes = siteMode.noContext ? '' : await notesOf(site);
+  // A caption carries a video id: it uses that video's own context, distilled from its metadata, not the site notes.
+  const notes = siteMode.noContext ? '' : request.videoId ? await videoNoteOf(request.videoId) : await notesOf(site);
   const messages = buildMessages(request.text, LANGUAGES[settings.targetLang], { ...request, notes });
   const translation = await stream(provider, messages, signal, send, settings.targetLang);
   if (translation) {
@@ -551,8 +593,10 @@ async function stream(provider, messages, signal, send, lang) {
 
 // Translations are shared by all tabs for the browser session (chrome.storage.session). The notes are left out:
 // a text translated once is reused while they grow.
-async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, learning, learningPrompt = '' }) {
-  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, learning, learningPrompt]));
+async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, videoId = '', learning, learningPrompt = '' }) {
+  // The video id is part of the key: the same caption line in two videos uses each video's own context, so the two
+  // translations must not share a cache entry.
+  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, videoId, learning, learningPrompt]));
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
   return CACHE_PREFIX + Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

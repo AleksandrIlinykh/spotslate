@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SpotSlate YouTube video fixture</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    #movie_player { position: relative; width: 640px; height: 360px; background: #111; }
+    .ytp-caption-window-container { position: absolute; left: 0; right: 0; bottom: 20px; }
+    .caption-window { display: block; text-align: center; }
+    .captions-text { display: block; }
+    .caption-visual-line { display: block; }
+    .ytp-caption-segment { display: inline-block; color: #fff; background: rgba(0, 0, 0, 0.75); font-size: 22px; padding: 2px 6px; }
+  </style>
+</head>
+<body>
+  <!-- A watch page: the player with a caption, and the metadata videoMeta() reads for the subtitle context. -->
+  <div id="movie_player" class="html5-video-player">
+    <div class="ytp-caption-window-container">
+      <div class="caption-window ytp-caption-window-bottom">
+        <span class="captions-text">
+          <span class="caption-visual-line"><span class="ytp-caption-segment">a stream of records</span></span>
+        </span>
+      </div>
+    </div>
+  </div>
+  <h1 class="title">Intro to Kafka</h1>
+  <ytd-channel-name id="channel-name"><a href="#">Confluent</a></ytd-channel-name>
+  <div id="description-inline-expander">Topics, partitions and brokers explained for beginners.</div>
+</body>
+</html>
