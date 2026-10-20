@@ -275,6 +275,28 @@
       timeline.sort((a, b) => a.start - b.start);
     }
 
+    // The fast path: the moment the caption changes to a line already translated (a look-ahead or seek-back cache hit),
+    // show it at once, with none of sync's settle wait. Misses fall through to the debounced sync (translate on demand).
+    function showIfCached() {
+      if (adShowing()) return;
+      const cue = captionsEl();
+      if (!(cue instanceof HTMLElement)) {
+        currentText = ''; // caption gone: let the same line re-render if it comes back
+        return;
+      }
+      const text = cue.innerText.replace(/\s+/g, ' ').trim();
+      if (!text) {
+        currentText = '';
+        return;
+      }
+      if (text === currentText) return;
+      const cached = cache.get(`${targetLang}\n${text}`);
+      if (cached === undefined) return; // not translated yet: the debounced sync will do it
+      currentText = text;
+      onCue(text);
+      render(cached);
+    }
+
     async function sync() {
       if (adShowing()) {
         // An ad is playing: drop any line and translate nothing until the video is back.
@@ -357,6 +379,7 @@
           observer = new MutationObserver(() => {
             place(); // keep glued to the native caption as it reflows, before the (debounced) translation catches up
             startTracking();
+            showIfCached(); // a line already translated shows at once; otherwise the debounced sync translates it
             scheduleSync();
           });
           observer.observe(document.documentElement, { childList: true, subtree: true });
