@@ -24,6 +24,7 @@
 
   const SUB_CLASS = 'spotslate-sub';
   const WAIT_CLASS = 'spotslate-sub-wait';
+  const STALE_CLASS = 'spotslate-sub-stale';
   const SETTLE_MS = 450; // wait for a cue's text to settle (auto-captions stream word by word) before translating it
   const GAP_PX = 2; // between our line's bottom and the native caption's top
 
@@ -31,14 +32,19 @@
     .${SUB_CLASS} {
       position: absolute; z-index: 60; pointer-events: none;
       text-align: center; white-space: pre-wrap; line-height: 1.2;
+      transition: opacity 0.15s ease;
     }
+    .${SUB_CLASS}.${STALE_CLASS} { opacity: 0.45; }
     .${SUB_CLASS} span {
       display: inline-block; padding: 0 0.5em; border-radius: 2px; font-size: 0.88em;
       background: rgba(8, 8, 8, 0.75); color: #ffdf6b; opacity: 0.95;
     }
     .${SUB_CLASS} .${WAIT_CLASS} { letter-spacing: 0.15em; animation: spotslate-sub-pulse 1.1s ease-in-out infinite; }
     @keyframes spotslate-sub-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.95; } }
-    @media (prefers-reduced-motion: reduce) { .${SUB_CLASS} .${WAIT_CLASS} { animation: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .${SUB_CLASS} { transition: none; }
+      .${SUB_CLASS} .${WAIT_CLASS} { animation: none; }
+    }
   `;
 
   /** @type {SpotSlate['createCaptions']} */
@@ -108,10 +114,12 @@
       if (seg) overlay.style.fontSize = getComputedStyle(seg).fontSize;
     }
 
-    // Put `content` in the overlay (a preloader when `wait`), or clear it when null, then reposition.
+    // Put `content` in the overlay (a preloader when `wait`), or clear it when null, then reposition. Anything shown is
+    // current, so the stale dim is cleared.
     function render(content, wait = false) {
       if (content === null) {
         overlay?.replaceChildren();
+        overlay?.classList.remove(STALE_CLASS);
         shownText = false;
         place();
         return;
@@ -122,8 +130,15 @@
       if (wait) span.className = WAIT_CLASS;
       span.textContent = content;
       overlay.replaceChildren(span);
+      overlay.classList.remove(STALE_CLASS);
       shownText = !wait;
       place();
+    }
+
+    // Dim the line kept on screen while the next one is translated, so a translation that no longer matches the caption
+    // reads as catching up, not as the truth; cleared as soon as the new translation (or a preloader) replaces it.
+    function markStale(on) {
+      overlay?.classList.toggle(STALE_CLASS, on);
     }
 
     // Track the native caption while it shows (it moves as it reflows and as the controls come and go); stop when it
@@ -166,11 +181,13 @@
         render(cached);
         return;
       }
-      if (!shownText) render('...', true); // preload only when nothing is shown yet; else keep the last line up
+      if (shownText) markStale(true); // keep the last translation up, dimmed, so it reads as catching up
+      else render('...', true); // nothing shown yet: a preloader instead
       const translation = (await translate(text))?.trim();
       if (currentText !== text) return; // the cue moved on while translating
       if (!translation) {
-        if (!shownText) render(null); // nothing came back and nothing to fall back to: clear the preloader
+        if (shownText) markStale(false); // nothing came back: keep the last line, undimmed
+        else render(null); // nothing to fall back to: clear the preloader
         return;
       }
       cache.set(key, translation);

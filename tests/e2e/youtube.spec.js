@@ -70,6 +70,22 @@ test('dual subtitles: the video context is distilled from the metadata, then rid
     .toBe(true);
 });
 
+test('dual subtitles: while the next line is translating, the previous one dims rather than vanishing', async ({ page, server, setSettings }) => {
+  await setSettings({ apiKey: 'slow' }); // slow, so the next translation stays pending long enough to observe the dim
+  await page.goto(`${server.url}/youtube-captions.html`);
+  await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person', { timeout: 15000 });
+  await page.evaluate(() => {
+    document.querySelector('.captions-text').innerHTML =
+      '<span class="caption-visual-line"><span class="ytp-caption-segment">a brand new line</span></span>';
+  });
+  // The old translation stays, dimmed, while the new one is on its way (no gap, but it reads as catching up).
+  await expect(page.locator('.spotslate-sub.spotslate-sub-stale')).toHaveCount(1);
+  await expect(page.locator('.spotslate-sub')).toContainText('What you have there is a person');
+  // When the new translation lands, the dim clears and the text updates.
+  await expect(page.locator('.spotslate-sub')).toContainText('[RU] a brand new line', { timeout: 15000 });
+  await expect(page.locator('.spotslate-sub.spotslate-sub-stale')).toHaveCount(0);
+});
+
 test('dual subtitles follow the caption: a new cue gets its own translation, with no leftover line', async ({ page, server }) => {
   await page.goto(`${server.url}/youtube-captions.html`);
   await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person');
