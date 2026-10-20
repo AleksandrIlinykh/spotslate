@@ -119,10 +119,11 @@ test('settings saved before providers existed become the DeepSeek entry', () => 
 
 test('withDefaults keeps keys allowed on the platform and replaces the rest with the defaults', () => {
   const write = { ctrl: true, alt: false, shift: true, meta: false, code: 'KeyK' };
-  assert.deepEqual(withDefaults({ keys: { read: 'Control', write } }, 'win').keys, { read: 'Control', write });
+  const vocab = DEFAULT_KEYS.vocabulary;
+  assert.deepEqual(withDefaults({ keys: { read: 'Control', write } }, 'win').keys, { read: 'Control', write, vocabulary: vocab });
   const refused = { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyF' };
-  assert.deepEqual(withDefaults({ keys: { read: 'Control', write: refused } }, 'win').keys, { read: 'Control', write: DEFAULT_KEYS.write });
-  assert.deepEqual(withDefaults({ keys: { read: 'Control', write: refused } }, 'mac').keys, { read: 'Control', write: refused });
+  assert.deepEqual(withDefaults({ keys: { read: 'Control', write: refused } }, 'win').keys, { read: 'Control', write: DEFAULT_KEYS.write, vocabulary: vocab });
+  assert.deepEqual(withDefaults({ keys: { read: 'Control', write: refused } }, 'mac').keys, { read: 'Control', write: refused, vocabulary: vocab });
 });
 
 test('retired DeepSeek model names fall back to the default model', () => {

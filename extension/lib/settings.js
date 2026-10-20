@@ -59,7 +59,7 @@ export function defaultTargetLang(uiLanguage = browserLanguage()) {
 }
 
 // Stored settings with every value checked: { provider, targetLang, providers: { [id]: { apiKey, model, baseUrl } },
-// keys: { read, write }, companion } (see keys.js; keys refused on `platform` become the defaults).
+// keys: { read, write, vocabulary }, companion } (see keys.js; keys refused on `platform` become the defaults).
 // Settings saved before providers existed kept apiKey, model and baseUrl at the top: they become the DeepSeek entry,
 // and DeepSeek stays in use.
 /** @returns {SpotSlate.Settings} */

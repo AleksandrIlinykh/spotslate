@@ -30,6 +30,7 @@ const drafts = {}; // provider id -> { apiKey, model, baseUrl } as shown, kept w
 const loadedModels = {}; // provider id -> model ids from its API
 let current = ''; // the provider on screen
 let writeShortcut = DEFAULT_KEYS.write; // the shortcut to write on screen
+let vocabularyShortcut = DEFAULT_KEYS.vocabulary; // the shortcut to save a word on screen
 
 for (const [code, name] of Object.entries(LANGUAGES)) {
   form.elements.targetLang.add(new Option(name, code));
@@ -356,27 +357,33 @@ function showKeys(keys) {
   form.elements.readKey.value = keys.read;
   writeShortcut = keys.write;
   form.elements.writeKey.value = formatShortcut(keys.write, platform);
+  vocabularyShortcut = keys.vocabulary;
+  form.elements.vocabularyKey.value = formatShortcut(keys.vocabulary, platform);
   element('keysProblem').textContent = '';
 }
 
-// The shortcut field records the next shortcut pressed in it; one that types text, or that the browser or the system
+// A shortcut field records the next shortcut pressed in it; one that types text, or that the browser or the system
 // needs, is refused with the reason and the field keeps the one before.
-form.elements.writeKey.addEventListener('keydown', (/** @type {KeyboardEvent & { currentTarget: HTMLInputElement }} */ event) => {
-  const plain = !event.ctrlKey && !event.altKey && !event.metaKey;
-  if (event.key === 'Tab' && plain) return; // Tab and Shift+Tab move on
-  event.preventDefault();
-  if (MODIFIER_KEYS.has(event.key)) return; // the rest of the shortcut is on its way
-  if (event.key === 'Escape' && plain && !event.shiftKey) {
-    event.currentTarget.blur();
-    return;
-  }
-  const shortcut = shortcutFromEvent(event);
-  const problem = shortcutProblem(shortcut, platform);
-  element('keysProblem').textContent = problem ?? '';
-  if (problem) return;
-  writeShortcut = shortcut;
-  form.elements.writeKey.value = formatShortcut(shortcut, platform);
-});
+function recordShortcut(field, apply) {
+  field.addEventListener('keydown', (/** @type {KeyboardEvent & { currentTarget: HTMLInputElement }} */ event) => {
+    const plain = !event.ctrlKey && !event.altKey && !event.metaKey;
+    if (event.key === 'Tab' && plain) return; // Tab and Shift+Tab move on
+    event.preventDefault();
+    if (MODIFIER_KEYS.has(event.key)) return; // the rest of the shortcut is on its way
+    if (event.key === 'Escape' && plain && !event.shiftKey) {
+      event.currentTarget.blur();
+      return;
+    }
+    const shortcut = shortcutFromEvent(event);
+    const problem = shortcutProblem(shortcut, platform);
+    element('keysProblem').textContent = problem ?? '';
+    if (problem) return;
+    apply(shortcut);
+    field.value = formatShortcut(shortcut, platform);
+  });
+}
+recordShortcut(form.elements.writeKey, (shortcut) => (writeShortcut = shortcut));
+recordShortcut(form.elements.vocabularyKey, (shortcut) => (vocabularyShortcut = shortcut));
 
 element('resetKeys').addEventListener('click', () => showKeys(DEFAULT_KEYS));
 
@@ -402,7 +409,7 @@ form.addEventListener('submit', async (event) => {
     provider: current,
     targetLang: form.elements.targetLang.value,
     providers: entriesToStore(),
-    keys: { read: form.elements.readKey.value, write: writeShortcut },
+    keys: { read: form.elements.readKey.value, write: writeShortcut, vocabulary: vocabularyShortcut },
     companion: form.elements.companion.value,
     learning: form.elements.learning.checked,
     learningPrompt: form.elements.learningPrompt.value,

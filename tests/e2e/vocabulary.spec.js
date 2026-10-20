@@ -29,6 +29,27 @@ test('Alt+A does not save the same word twice', async ({ page, server, serviceWo
   await expect.poll(() => serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => o.vocabulary?.de?.length ?? 0))).toBe(1);
 });
 
+test('the saving shortcut follows the settings: a changed key saves, the old one does not', async ({ page, server, serviceWorker }) => {
+  await serviceWorker.evaluate(() =>
+    chrome.storage.local.set({
+      settings: {
+        keys: {
+          read: 'Alt',
+          write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' },
+          vocabulary: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyW' },
+        },
+      },
+    }),
+  );
+  await page.goto(`${server.url}/vocabulary.html`);
+  await page.locator('#word').dblclick();
+  await page.keyboard.press('Alt+a'); // the old default, no longer the shortcut: nothing happens
+  await page.keyboard.press('Alt+w'); // the chosen shortcut: this one saves
+  await expect
+    .poll(() => serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => (o.vocabulary?.de ?? []).map((e) => e.word))))
+    .toEqual(['Katze']);
+});
+
 test('the toolbar popup shows the vocabulary by language, copies the current one, and removes a word', async ({ page, extensionId, serviceWorker, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await serviceWorker.evaluate(() =>

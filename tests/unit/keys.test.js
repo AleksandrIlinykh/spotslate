@@ -24,8 +24,11 @@ function shortcut(text) {
 const problem = (text, platform = 'win') => shortcutProblem(shortcut(text), platform);
 
 test('by default Alt reads and Alt+T writes, which every platform allows', () => {
-  assert.deepEqual(DEFAULT_KEYS, { read: 'Alt', write: shortcut('Alt+T') });
-  for (const platform of PLATFORMS) assert.equal(shortcutProblem(DEFAULT_KEYS.write, platform), null, platform);
+  assert.deepEqual(DEFAULT_KEYS, { read: 'Alt', write: shortcut('Alt+T'), vocabulary: shortcut('Alt+A') });
+  for (const platform of PLATFORMS) {
+    assert.equal(shortcutProblem(DEFAULT_KEYS.write, platform), null, platform);
+    assert.equal(shortcutProblem(DEFAULT_KEYS.vocabulary, platform), null, platform);
+  }
 });
 
 test('a shortcut is taken from the physical key, whatever letter the layout puts on it', () => {
@@ -102,14 +105,20 @@ test('shortcuts are written the way each platform names its keys', () => {
 });
 
 test('stored keys are kept when they are allowed, and replaced by the defaults when they are not', () => {
-  const custom = { read: 'Control', write: shortcut('Ctrl+Shift+K') };
+  const custom = { read: 'Control', write: shortcut('Ctrl+Shift+K'), vocabulary: shortcut('Ctrl+Shift+L') };
   assert.deepEqual(checkedKeys(custom, 'win'), custom);
   assert.deepEqual(checkedKeys(undefined, 'win'), DEFAULT_KEYS);
-  assert.deepEqual(checkedKeys({ read: 'Shift', write: shortcut('Alt+W') }, 'win'), { read: 'Alt', write: shortcut('Alt+W') });
+  assert.deepEqual(checkedKeys({ read: 'Shift', write: shortcut('Alt+W') }, 'win'), { read: 'Alt', write: shortcut('Alt+W'), vocabulary: DEFAULT_KEYS.vocabulary });
   assert.deepEqual(checkedKeys({ read: 'Alt', write: shortcut('Ctrl+T') }, 'win'), DEFAULT_KEYS);
   assert.deepEqual(checkedKeys({ read: 'Alt', write: shortcut('Alt+F') }, 'win'), DEFAULT_KEYS);
   assert.deepEqual(checkedKeys({ write: { ...shortcut('Alt+W'), alt: 'yes', extra: 1 } }, 'win'), DEFAULT_KEYS);
   assert.deepEqual(checkedKeys({ write: 'Alt+W' }, 'win'), DEFAULT_KEYS);
+  // The vocabulary shortcut is checked on its own: a refused one falls back while the write is kept.
+  assert.deepEqual(checkedKeys({ read: 'Alt', write: shortcut('Alt+W'), vocabulary: shortcut('Ctrl+T') }, 'win'), {
+    read: 'Alt',
+    write: shortcut('Alt+W'),
+    vocabulary: DEFAULT_KEYS.vocabulary,
+  });
 });
 
 test('the platform comes from what the browser says about itself', () => {

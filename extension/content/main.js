@@ -86,7 +86,12 @@
   let hero = null; // createHero() for it, none until the settings are here
   // The key held to read ('Alt' or 'Control') with its name on this platform, and the shortcut to write
   // (see lib/keys.js); background sends the ones in the settings.
-  let keys = { read: 'Alt', readName: 'Alt', write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' } };
+  let keys = {
+    read: 'Alt',
+    readName: 'Alt',
+    write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' },
+    vocabulary: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyA' },
+  };
 
   // The settings hold API keys, so pages get only the target language, the engine and the keys, from background.
   // Until they are here the language and the engine are not known: a hint shown meanwhile is shown again in the right
@@ -515,10 +520,19 @@
     );
   }
 
-  // Alt+A saves the selected word to the vocabulary. The physical A key, so it works in any layout; only Alt, so it
-  // does not clash with Ctrl+A (select all).
-  const isAddWordKey = (event) =>
-    event.isTrusted && event.altKey && event.code === 'KeyA' && !event.ctrlKey && !event.shiftKey && !event.metaKey;
+  // The shortcut to save the selected word to the vocabulary, Alt+A unless the settings say otherwise; the physical key,
+  // so it works in any keyboard layout.
+  function isAddWordKey(event) {
+    const { vocabulary } = keys;
+    return (
+      event.isTrusted &&
+      event.code === vocabulary.code &&
+      event.ctrlKey === vocabulary.ctrl &&
+      event.altKey === vocabulary.alt &&
+      event.shiftKey === vocabulary.shift &&
+      event.metaKey === vocabulary.meta
+    );
+  }
 
   // The word Alt+A saves: what is selected (on the page or, via the open popup, the phrase it is translating). Its
   // language is the detector's confident guess for it, else the page's declared language; without either, nothing is

@@ -37,6 +37,8 @@ declare namespace SpotSlate {
     read: 'Alt' | 'Control';
     /** The shortcut that opens the compose window. */
     write: Shortcut;
+    /** The shortcut that saves the selected word to the vocabulary. */
+    vocabulary: Shortcut;
   }
 
   /** What the user filled in for a provider; blank model and URL mean the provider's defaults. */
@@ -132,6 +134,7 @@ declare namespace SpotSlate {
       baseUrl: HTMLInputElement;
       readKey: HTMLSelectElement;
       writeKey: HTMLInputElement;
+      vocabularyKey: HTMLInputElement;
       companion: RadioNodeList;
       learning: HTMLInputElement;
       learningPrompt: HTMLTextAreaElement;

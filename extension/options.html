@@ -81,7 +81,7 @@
     #modelList li { padding: 6px 8px; cursor: pointer; overflow-wrap: anywhere; }
     #modelList li[aria-selected="true"] { background: #1a73e8; color: #fff; }
     @media (prefers-color-scheme: dark) { #modelList li[aria-selected="true"] { background: #8ab4f8; color: #202124; } }
-    #writeKey { cursor: pointer; caret-color: transparent; }
+    #writeKey, #vocabularyKey { cursor: pointer; caret-color: transparent; }
     #status.error, #keysProblem { color: var(--error); }
     .companions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
     @media (max-width: 480px) { .companions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -175,6 +175,10 @@
       </div>
       <p class="hint" id="keysProblem" role="alert"></p>
       <p class="hint" id="keysHint">Click the field and press a new shortcut: Alt or Ctrl with a letter or a digit. It opens the compose window at the field you are typing in, or next to the mouse.</p>
+
+      <label for="vocabularyKey">Save a word to the vocabulary</label>
+      <input id="vocabularyKey" readonly spellcheck="false" autocomplete="off" aria-describedby="keysProblem">
+      <p class="hint">Click the field and press a new shortcut. Select a word on a page and press it to save the word, by language; see and copy your words from the toolbar window.</p>
       <p class="hint"><span id="toolbarKeyLine">The toolbar window opens with <kbd id="toolbarKey"></kbd>. </span><a href="#" id="chromeShortcuts">Change it in Chrome</a></p>
     </section>
 

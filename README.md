@@ -105,7 +105,7 @@ Turn on YouTube's own captions (the CC button) and SpotSlate adds their translat
 
 ## Vocabulary
 
-Reading in a language you are learning, select a word and press Alt+A: SpotSlate saves it, and a small note confirms. No translation is stored, just the word, filed under its language (the one detected, or the page's), so each language you read keeps its own list. The same word is not saved twice.
+Reading in a language you are learning, select a word and press Alt+A (or the shortcut you set under "Keys"): SpotSlate saves it, and a small note confirms. No translation is stored, just the word, filed under its language (the one detected, or the page's), so each language you read keeps its own list. The same word is not saved twice.
 
 Open the SpotSlate icon on the toolbar to see your words at the bottom of the window: a tab for each language, newest first. Remove any with the "×" next to it. "Copy" puts the chosen language's words on the clipboard, one per line, to paste wherever you keep them (a notes file, or Anki). The list keeps growing until you remove words; it stays on your computer and is never sent anywhere.
 
@@ -130,7 +130,7 @@ After changing the extension files, click "Reload" on its card in `chrome://exte
 ## Keys
 
 - Alt to read and Alt+T to write are the defaults. In the settings, under "Keys", you can hold Ctrl to read instead, and record another shortcut to write: click the field and press it.
-- Alt+A saves the selected word to your vocabulary (see "Vocabulary" above).
+- Alt+A saves the selected word to your vocabulary; record another shortcut for it under "Save a word to the vocabulary" (see "Vocabulary" above).
 - Shortcuts that would type text, or that Chrome or your system needs (such as Ctrl+T, Alt+F, Ctrl+Alt, which is AltGr, or Alt+Shift, which switches the layout), are refused with the reason. "Reset keys" brings the defaults back.
 - The toolbar window's shortcut (Ctrl+Shift+Y) is set in Chrome, at `chrome://extensions/shortcuts`; the settings link there.
 

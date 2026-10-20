@@ -162,6 +162,17 @@ test('saves trimmed values, and a blank model or URL means the default', async (
   });
 });
 
+test('the vocabulary shortcut can be changed in the settings, like the write shortcut', async ({ page, extensionId, serviceWorker }) => {
+  await page.goto(optionsUrl(extensionId));
+  await expect(page.locator('#vocabularyKey')).toHaveValue('Alt+A'); // the default
+  await page.locator('#vocabularyKey').click();
+  await page.keyboard.press('Alt+w');
+  await expect(page.locator('#vocabularyKey')).toHaveValue('Alt+W');
+  await save(page);
+  await expect(page.locator('#status')).toHaveText('Saved');
+  expect((await stored(serviceWorker)).keys.vocabulary).toEqual({ ctrl: false, alt: true, shift: false, meta: false, code: 'KeyW' });
+});
+
 test('saves the learning mode, off by default and kept when turned on', async ({ page, extensionId, serviceWorker }) => {
   await page.goto(optionsUrl(extensionId));
   await expect(page.locator('#learning')).not.toBeChecked();

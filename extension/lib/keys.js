@@ -8,6 +8,7 @@ export const READ_KEYS = Object.freeze(['Alt', 'Control']);
 export const DEFAULT_KEYS = Object.freeze({
   read: 'Alt',
   write: Object.freeze({ ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' }),
+  vocabulary: Object.freeze({ ctrl: false, alt: true, shift: false, meta: false, code: 'KeyA' }),
 });
 
 const MODIFIERS = ['ctrl', 'alt', 'shift', 'meta'];
@@ -96,17 +97,24 @@ export function shortcutProblem(shortcut, platform) {
   return null;
 }
 
+// A stored shortcut, replaced by `fallback` when it is malformed or refused on this platform.
+function checkedShortcut(stored, platform, fallback) {
+  const wellFormed =
+    stored !== null &&
+    typeof stored === 'object' &&
+    MODIFIERS.every((modifier) => typeof stored[modifier] === 'boolean') &&
+    typeof stored.code === 'string';
+  if (!wellFormed) return fallback;
+  const shortcut = /** @type {SpotSlate.Shortcut} */ (Object.fromEntries([...MODIFIERS, 'code'].map((field) => [field, stored[field]])));
+  return shortcutProblem(shortcut, platform) ? fallback : shortcut;
+}
+
 // Stored keys, each replaced by its default when it is unknown, malformed or refused on this platform.
 /** @returns {SpotSlate.Keys} */
 export function checkedKeys(stored, platform) {
-  const read = READ_KEYS.includes(stored?.read) ? stored.read : DEFAULT_KEYS.read;
-  const write = stored?.write;
-  const wellFormed =
-    write !== null &&
-    typeof write === 'object' &&
-    MODIFIERS.every((modifier) => typeof write[modifier] === 'boolean') &&
-    typeof write.code === 'string';
-  if (!wellFormed) return { read, write: DEFAULT_KEYS.write };
-  const shortcut = /** @type {SpotSlate.Shortcut} */ (Object.fromEntries([...MODIFIERS, 'code'].map((field) => [field, write[field]])));
-  return { read, write: shortcutProblem(shortcut, platform) ? DEFAULT_KEYS.write : shortcut };
+  return {
+    read: READ_KEYS.includes(stored?.read) ? stored.read : DEFAULT_KEYS.read,
+    write: checkedShortcut(stored?.write, platform, DEFAULT_KEYS.write),
+    vocabulary: checkedShortcut(stored?.vocabulary, platform, DEFAULT_KEYS.vocabulary),
+  };
 }

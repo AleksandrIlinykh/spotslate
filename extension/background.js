@@ -74,12 +74,12 @@ chrome.declarativeNetRequest
  * @returns {SpotSlate.PageSettings}
  */
 function pageSettings(settings) {
-  const { read, write } = settings.keys;
+  const { read, write, vocabulary } = settings.keys;
   return {
     targetLang: settings.targetLang,
     engine: activeProvider(settings).api === 'browser' ? 'browser' : 'api',
     providerName: activeProvider(settings).name,
-    keys: { read, readName: readKeyName(read, currentPlatform()), write },
+    keys: { read, readName: readKeyName(read, currentPlatform()), write, vocabulary },
     languages: Object.keys(LANGUAGES),
     companion: settings.companion,
     learning: settings.learning,
