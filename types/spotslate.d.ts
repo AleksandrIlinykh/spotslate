@@ -465,6 +465,8 @@ interface SpotSlate {
   elementAt(x: number, y: number): Element | null;
   /** content/block.js: the readable block around a node, or why it cannot be read; null for nothing to read. */
   inspectBlock(start: Node | null): SpotSlate.Picked | null;
+  /** content/youtube.js: on YouTube, mark the caption cue around the element as one block (a no-op elsewhere). */
+  markCaptionBlock(element: Element | null): void;
   /** content/block.js: whether the point is over a line of text rather than padding. */
   isOverText(x: number, y: number): boolean;
   /** content/block.js: a textarea or a text or search input, never a password, one-time code or card field. */

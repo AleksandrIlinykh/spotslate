@@ -71,6 +71,7 @@ spotslate/
       corgi.js          heroes.corgi: Biscuit, a corgi
       monkey.js         heroes.monkey: Momo, a monkey
       hero.js           drawHero(hero, host, options), createHero(hero, spot): a companion drawn, by the mouse and on the popup
+      youtube.js        markCaptionBlock(element): on YouTube, mark the caption cue as one translatable block
       main.js           trigger, what to translate, talking to background, closing, page cache, Alt+click and Alt+T
     compose.html        the toolbar popup: the compose window on its own
     compose-page.js
@@ -266,7 +267,7 @@ While Alt is held (and it is not a combo), the block that would be translated is
    Alt+click on a selection, in a field, an editor or anywhere, translates it as Alt over it does and opens no compose window: SpotSlate takes the `mousedown`, so the selection stays (on a Mac, the Ctrl+click menu is left alone there).
 2. **The block under the mouse** (`inspectBlock(element)`):
    1. The element is inside `input`, `textarea` or `select`: not translated, reason `editable`. Rich text editors (`contenteditable`, e.g. Confluence in edit mode, where the whole page is one) are not special: the paragraph under the mouse inside them is translated like any other, and the editor content is never changed.
-   1b. The element has a `[data-spotslate-block]` ancestor (a block a page marks as one unit; the PDF reader wraps a paragraph's lines in one): that ancestor is the block, by the same length rule as below. A generic hint, not PDF-specific.
+   1b. The element has a `[data-spotslate-block]` ancestor (a block a page marks as one unit; the PDF reader wraps a paragraph's lines in one): that ancestor is the block, by the same length rule as below. A generic hint, not PDF-specific. On YouTube `content/youtube.js` (`markCaptionBlock`, called from `pickUnderMouse` only while picking, so nothing runs on its own) marks the caption cue `.captions-text` with it, so Alt over a caption translates the whole current line, not just the visual row under the pointer.
    2. Walk up from the element (stopping before `body`/`html`). The first element whose `display` is one of `block`, `list-item`, `table-cell`, `table-caption`, `flex`, `grid`, `flow-root` and whose `innerText` has at least one letter (`\p{L}`) is the candidate.
    3. If the candidate's text is longer than `MAX_CHARS = 3000`: not translated, reason `too-long` (it is a page wrapper, not a paragraph); the hint suggests selecting a part. This only applies when the mouse is over a line of text (`isOverText`, via `caretRangeFromPoint`), so moving across the margins between paragraphs shows nothing.
    4. Otherwise the candidate.
@@ -777,5 +778,6 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   175. The toolbar popup's document button opens the PDF reader (`pdf.html`) in a new tab.
   176. The compose window's Report link opens a comment field; sending it opens the GitHub issue with the setup and the comment, keeps the text off the URL, and copies the draft and the result to the clipboard.
   177. The monkey companion (Momo) jumps by the mouse, and now and then, resting, grabs its head (the `panic` fidget) before resting again.
+  178. Alt over a YouTube caption translates the whole current caption (`.captions-text`, all its visual lines), not just the visual row under the pointer.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

@@ -2,6 +2,7 @@
   const {
     elementAt,
     inspectBlock,
+    markCaptionBlock,
     isOverText,
     writableField,
     selectionAt,
@@ -101,6 +102,7 @@
   function pickUnderMouse() {
     const element = elementAt(mouseX, mouseY);
     if (element && (popup.isOwn(element) || composeWindow.isOwn(element))) return undefined;
+    if (element) markCaptionBlock(element); // on YouTube, make the whole caption one block before picking
     const picked = selectionAt(mouseX, mouseY) ?? (element ? inspectBlock(element) : null);
     // Over a huge block's padding or margins rather than its text there is nothing to point at.
     if (picked?.reason === 'too-long' && !picked.selection && !isOverText(mouseX, mouseY)) return null;
