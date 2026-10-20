@@ -1,6 +1,6 @@
 # SpotSlate privacy policy
 
-Effective date: October 15, 2026
+Effective date: October 20, 2026
 
 SpotSlate is an open-source browser extension that translates the paragraph you hold Alt over. This policy explains what it does with your data. The code is public, so every statement here can be checked in this repository.
 
@@ -13,6 +13,7 @@ SpotSlate is an open-source browser extension that translates the paragraph you 
   - for a dictionary entry of one to three selected words, up to 8 words around them from the same sentence;
   - after each text of 40 characters or more that you translate on a site, that text and its translation, with the site's current context, so the provider can rewrite the context: one or two short paragraphs about the site's subject and terms, built only from what you translated there. The context then goes with every later translation on that site, and with what you write in the compose window there.
 - **Text you write in SpotSlate's compose window** (opened with Alt+click on a text field, Alt+T, the toolbar icon or Ctrl+Shift+Y): your draft, and the translation when you click "Check". With an AI provider, the site context goes with the draft so the same terms come back; "Check" goes without it. SpotSlate never reads the text around the field, and never puts text into the page or sends anything there.
+- **On YouTube, the captions:** while you keep YouTube's own captions turned on and SpotSlate is on for the site, the text of each caption, as it shows, is translated and a line with the translation is added under it. With the built-in translator this runs on your computer; with an AI provider the caption text goes to it, like any other text you translate.
 - **With the built-in translator, also:** on your first click on a page, the start of the page text (up to 1,000 characters) or its declared language is read on your computer to tell the page's language and get the translation model ready. This never leaves your computer.
 - **Your settings**: the language to translate into, the provider you chose and, for each provider you filled in, its API key, model and API URL, and the keys you set to read and write.
 - **Translations**: kept so that the same text is not translated twice (see "Storage").
@@ -25,7 +26,8 @@ SpotSlate does not read or send anything until you hold Alt, write in its compos
 - **An AI provider you choose** (for example DeepSeek, OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, xAI or Alibaba Qwen): the text goes in an HTTPS request from your browser directly to the provider's API, with your own API key. The provider's privacy policy and terms then apply to it; please read them before choosing a provider. The settings page says, under the provider you pick, that the texts go to it.
 - **A local server** (Ollama, LM Studio, or another API URL on `localhost`): the text goes to that server on your computer.
 - **An API URL you enter yourself**: the text goes to that address, and Chrome asks you first whether SpotSlate may reach it.
-- **"Report" on the popup**: it opens a new GitHub issue in your browser with the SpotSlate version, the translator and model, the language and your browser's user agent, and copies the text and its translation to your clipboard. Nothing is sent until you submit the issue yourself, and the text goes there only if you paste it.
+- **A local PDF you open in SpotSlate's reader**: the file stays on your computer and is never uploaded; only a paragraph you hold Alt over is translated, the same way and to the same place as on a web page.
+- **"Report" on the popup or in the compose window**: it opens a new GitHub issue in your browser with the SpotSlate version, the translator and model, the language and your browser's user agent, and copies the text and its translation to your clipboard. Nothing is sent until you submit the issue yourself, and the text goes there only if you paste it.
 - **When you remove SpotSlate**: Chrome opens a short form on GitHub about why, with only the SpotSlate version in its address; you can close it without answering.
 
 SpotSlate sends nothing anywhere else: no analytics, telemetry, crash reports or ads, and it loads no code from the internet. Requests to OpenRouter carry two headers that name the extension (`HTTP-Referer` with this repository's address and `X-Title: SpotSlate`); they contain no data about you.

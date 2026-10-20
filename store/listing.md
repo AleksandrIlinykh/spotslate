@@ -25,6 +25,8 @@ What to fill in when submitting SpotSlate. The package is `dist/spotslate-<versi
 > - Select a word or two first: a short dictionary entry that fits the sentence around it.
 > - Copy the translation, pin the popup, drag it aside to read a long text in parallel.
 > - Switch the language to translate into right in the popup's title bar.
+> - On YouTube, turn on the captions to get a line with their translation under each one.
+> - Open a local PDF in SpotSlate's reader and hold Alt over its paragraphs the same way.
 >
 > WRITE
 > - Alt+click a text field, or press Alt+T while typing: write in your own language and get the text in the page's language, to copy.
@@ -40,7 +42,7 @@ What to fill in when submitting SpotSlate. The package is `dist/spotslate-<versi
 > - No account, no server, no analytics. Web pages cannot read your key or look into SpotSlate's windows.
 >
 > AND
-> - A little pixel companion dances next to the mouse while you hold Alt and sits on the translation when it is ready: Spot the shiba, Ink the black cat or Biscuit the corgi. Or no one, if you prefer.
+> - A little pixel companion dances next to the mouse while you hold Alt and sits on the translation when it is ready: Spot the shiba, Ink the black cat, Biscuit the corgi or Momo the monkey. Or no one, if you prefer.
 > - SpotSlate speaks your language: its hints and buttons follow the language you translate into (13 languages).
 > - Keys can be changed in the settings; shortcuts that would type text or that Chrome needs are refused.
 >
