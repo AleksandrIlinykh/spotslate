@@ -6,6 +6,21 @@
   const SHOWN_MS = 1600;
 
   const important = (rules) => rules.map((rule) => `${rule} !important`).join('; ');
+  // The flying word: a little pill that the companion tosses up and away when a word is saved, into the vocabulary.
+  const TOSS_STYLE = important([
+    'all: initial',
+    'position: fixed',
+    'display: block',
+    'padding: 3px 10px',
+    'border-radius: 10px',
+    'background: #1a7f37',
+    'color: #ffffff',
+    'font: 12px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+    'white-space: nowrap',
+    'z-index: 2147483647',
+    'pointer-events: none',
+    'transform: translate(-50%, -50%)',
+  ]);
   const STYLE = important([
     'all: initial',
     'position: fixed',
@@ -48,6 +63,28 @@
           box.style.setProperty('opacity', '0', 'important');
           setTimeout(() => box.remove(), motion ? 200 : 0);
         }, SHOWN_MS);
+      },
+      // The companion tosses the word up and away from `origin` (where the companion is) into the vocabulary. Skipped
+      // with reduced motion; the toast still confirms.
+      toss(text, origin) {
+        if (!motion || !origin) return;
+        const pill = document.createElement('div');
+        pill.dataset.spotslateToss = '';
+        pill.textContent = text;
+        pill.style.cssText = `${TOSS_STYLE}; left: ${Math.round(origin.x)}px !important; top: ${Math.round(origin.y)}px !important;`;
+        document.documentElement.append(pill);
+        const drift = (Math.random() - 0.5) * 90;
+        const rise = 130;
+        const animation = pill.animate(
+          [
+            { transform: 'translate(-50%, -50%) scale(0.6) rotate(0deg)', opacity: 0 },
+            { transform: 'translate(-50%, -50%) scale(1) rotate(-6deg)', opacity: 1, offset: 0.18 },
+            { transform: `translate(calc(-50% + ${drift * 0.5}px), calc(-50% - ${rise * 0.6}px)) scale(1) rotate(6deg)`, opacity: 1, offset: 0.55 },
+            { transform: `translate(calc(-50% + ${drift}px), calc(-50% - ${rise}px)) scale(0.25) rotate(14deg)`, opacity: 0 },
+          ],
+          { duration: 700, easing: 'cubic-bezier(0.25, 0.7, 0.35, 1)' },
+        );
+        animation.onfinish = animation.oncancel = () => pill.remove();
       },
     };
   }

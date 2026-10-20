@@ -543,7 +543,24 @@
     if (!word) return;
     const lang = await wordLanguage(selection, word);
     const result = await chrome.runtime.sendMessage({ type: 'add-word', word, lang }).catch(() => null);
-    if (result?.added) toast.show(t(targetLang, 'wordAdded', { word: result.word }));
+    if (result?.added) {
+      toast.show(t(targetLang, 'wordAdded', { word: result.word }));
+      toast.toss(result.word, tossOrigin(selection)); // the companion throws the word into the vocabulary
+    }
+  }
+
+  // Where the tossed word flies from: the companion if it is on screen (Alt is held, so it usually is), else the
+  // selection, else the bottom of the screen.
+  function tossOrigin(selection) {
+    const companion = document.getElementById('spotslate-hero');
+    if (companion?.isConnected) {
+      const rect = companion.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    const rect = range?.getBoundingClientRect();
+    if (rect && (rect.width || rect.height)) return { x: rect.left + rect.width / 2, y: rect.top };
+    return { x: window.innerWidth / 2, y: window.innerHeight - 80 };
   }
 
   // The language to file the word under. A lone word is hard to tell apart, so the sentence or paragraph it sits in

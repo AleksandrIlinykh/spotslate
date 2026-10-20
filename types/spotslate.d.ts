@@ -468,6 +468,8 @@ declare namespace SpotSlate {
   /** A brief confirmation toast (content/toast.js `createToast`). */
   interface Toast {
     show(text: string): void;
+    /** The companion tosses the saved word up and away from `origin` into the vocabulary (skipped with reduced motion). */
+    toss(text: string, origin: { x: number; y: number } | null): void;
   }
 
   /** A caption cue from the timedtext timeline (content/youtube.js `parseTimedText`): a line and when it shows. */

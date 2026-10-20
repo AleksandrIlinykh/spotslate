@@ -9,8 +9,10 @@ test('Alt+A saves the selected word to the vocabulary, under the page language, 
   await page.locator('#word').dblclick(); // selects "Katze"
   await page.keyboard.press('Alt+a');
 
-  // A toast names the word (in the language the user translates into).
+  // A toast names the word (in the language the user translates into), and the companion tosses the word into the
+  // vocabulary (a brief flying pill with just the word).
   await expect(page.locator('#spotslate-toast')).toContainText('Katze');
+  await expect(page.locator('[data-spotslate-toss]')).toHaveText('Katze');
 
   // It is stored under the page's declared language (de), with no translation.
   await expect
