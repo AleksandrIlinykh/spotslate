@@ -13,8 +13,11 @@
 //    fullscreen too) and positioned over the player just above the native caption window, tracking it. We never touch
 //    the native caption DOM, so the native line never moves because of us. The translation reads smaller and in a warm
 //    tint, to tell it from the original. A cue's text is translated once it settles (auto-captions stream word by
-//    word), cached by line, and the previous translation stays on screen until the next one is ready, so there is no
-//    flicker between cues. Only the lines of the video being watched are sent, and only while captions show.
+//    word), cached by line, and the previous translation stays on screen (dimmed) until the next one is ready, so there
+//    is no flicker between cues. Look-ahead: content/youtube-timedtext.js hands over the cue timeline, and the lines
+//    just ahead of the playhead are translated into the cache in advance, so the display (driven by the native caption,
+//    to stay aligned with it) finds them ready and there is no lag. Only the lines of the video being watched are sent,
+//    and only while captions show.
 (() => {
   /** @type {SpotSlate['markCaptionBlock']} */
   function markCaptionBlock(element) {
@@ -22,11 +25,42 @@
     if (cue instanceof HTMLElement && cue.closest('.ytp-caption-window-container')) cue.dataset.spotslateBlock = '';
   }
 
+  // Parse a `/api/timedtext` json3 body (content/youtube-timedtext.js hands it over) into the cue timeline: each event
+  // is a displayable line with a start and end. Empty events (line breaks) are dropped; the cues come out time-ordered.
+  /** @type {SpotSlate['parseTimedText']} */
+  function parseTimedText(json) {
+    let data;
+    try {
+      data = JSON.parse(json);
+    } catch {
+      return [];
+    }
+    const events = Array.isArray(data?.events) ? data.events : [];
+    const cues = [];
+    for (const event of events) {
+      if (typeof event?.tStartMs !== 'number') continue;
+      const text = (event.segs ?? [])
+        .map((seg) => (seg && typeof seg.utf8 === 'string' ? seg.utf8 : ''))
+        .join('')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!text) continue;
+      const start = event.tStartMs / 1000;
+      const end = (event.tStartMs + (typeof event.dDurationMs === 'number' ? event.dDurationMs : 0)) / 1000;
+      cues.push({ start, end, text });
+    }
+    cues.sort((a, b) => a.start - b.start);
+    return cues;
+  }
+
   const SUB_CLASS = 'spotslate-sub';
   const WAIT_CLASS = 'spotslate-sub-wait';
   const STALE_CLASS = 'spotslate-sub-stale';
   const SETTLE_MS = 450; // wait for a cue's text to settle (auto-captions stream word by word) before translating it
   const GAP_PX = 2; // between our line's bottom and the native caption's top
+  const LOOKAHEAD_S = 15; // translate cues this far ahead of the playhead, so the translation is ready before the line
+  const WARM_MAX = 2; // cues warmed per tick, so the look-ahead fills gradually instead of in one burst of requests
+  const WARM_EVERY_MS = 1000; // between warming ticks
 
   const CAPTIONS_CSS = `
     .${SUB_CLASS} {
@@ -62,8 +96,18 @@
     /** @type {HTMLElement | null} */
     let overlay = null;
     let shownText = false; // whether the overlay currently shows a translation (not a preloader, not empty)
-    let currentText = ''; // the native cue text last handled, so the same line is not translated twice
+    let currentText = ''; // the native cue text last handled (the DOM fallback), so the same line is not translated twice
     const cache = new Map(); // `${targetLang}\n${text}` -> translation
+    // The cue timeline from timedtext (look-ahead): the lines just ahead of the playhead are translated into the cache,
+    // so sync's lookup is a hit when the line appears and there is no lag. The display stays driven by the native
+    // caption (sync), so the translation stays aligned with it. `onTimedText` listens for the MAIN-world messages.
+    let videoId = '';
+    /** @type {SpotSlate.Cue[]} */
+    let timeline = [];
+    let lastWarm = 0;
+    const pending = new Set(); // `${targetLang}\n${text}` being translated ahead, so a cue is not warmed twice
+    /** @type {((event: MessageEvent) => void) | null} */
+    let onTimedText = null;
 
     const captionsEl = () => document.querySelector('.ytp-caption-window-container .captions-text');
 
@@ -156,12 +200,78 @@
         raf = 0;
         return;
       }
+      if (timeline.length) warmTimeline();
       place();
       raf = captionsEl() ? requestAnimationFrame(track) : 0;
     }
 
     function startTracking() {
       if (!raf && running) raf = requestAnimationFrame(track);
+    }
+
+    const videoTime = () => {
+      const video = document.querySelector('#movie_player video');
+      return video instanceof HTMLMediaElement ? video.currentTime : null;
+    };
+
+    // The look-ahead only warms the cache; the display stays driven by the native caption (sync), so the translation
+    // stays aligned with the line on screen. Cue start times run a line ahead of the display, so driving by them would
+    // show the translation before the original; warming the upcoming lines instead makes sync's lookup a hit when the
+    // line appears, so there is no lag. Throttled, and off during ads or with no caption.
+    function warmTimeline() {
+      if (adShowing() || !captionsEl()) return;
+      const t = videoTime();
+      if (t == null) return;
+      const now = performance.now();
+      if (now - lastWarm < WARM_EVERY_MS) return;
+      lastWarm = now;
+      warmAhead(t);
+    }
+
+    // Translate a cue ahead of time into the cache (once); `pending` keeps a cue from being warmed twice at once.
+    function warm(text) {
+      const key = `${targetLang}\n${text}`;
+      if (cache.has(key) || pending.has(key)) return false;
+      pending.add(key);
+      Promise.resolve(translate(text)).then(
+        (answer) => {
+          pending.delete(key);
+          const translation = answer?.trim?.() ?? '';
+          if (translation) cache.set(key, translation);
+        },
+        () => pending.delete(key),
+      );
+      return true;
+    }
+
+    function warmAhead(t) {
+      let warmed = 0;
+      for (const cue of timeline) {
+        if (cue.start < t) continue;
+        if (cue.start > t + LOOKAHEAD_S) break;
+        if (warm(cue.text) && ++warmed >= WARM_MAX) break;
+      }
+    }
+
+    function handleTimedText(event) {
+      if (event.source !== window) return;
+      const data = event.data;
+      if (!data || data.spotslate !== 'spotslate-timedtext' || typeof data.body !== 'string') return;
+      const cues = parseTimedText(data.body);
+      if (cues.length === 0) return;
+      if (timeline.length === 0) {
+        timeline = cues;
+        return;
+      }
+      const seen = new Set(timeline.map((cue) => `${cue.start}|${cue.text}`));
+      for (const cue of cues) {
+        const id = `${cue.start}|${cue.text}`;
+        if (!seen.has(id)) {
+          seen.add(id);
+          timeline.push(cue);
+        }
+      }
+      timeline.sort((a, b) => a.start - b.start);
     }
 
     async function sync() {
@@ -223,7 +333,16 @@
           targetLang = options.targetLang;
           currentText = ''; // the open cue must be translated again, into the new language
         }
+        if (options.videoId !== undefined && options.videoId !== videoId) {
+          videoId = options.videoId; // a new video: its timeline, and what was shown, start over
+          timeline = [];
+          currentText = '';
+        }
         running = true;
+        if (!onTimedText) {
+          onTimedText = handleTimedText;
+          window.addEventListener('message', onTimedText);
+        }
         if (!observer) {
           injectStyle();
           observer = new MutationObserver(() => {
@@ -240,11 +359,17 @@
         running = false;
         observer?.disconnect();
         observer = null;
+        if (onTimedText) {
+          window.removeEventListener('message', onTimedText);
+          onTimedText = null;
+        }
         clearTimeout(timer);
         timer = 0;
         if (raf) cancelAnimationFrame(raf);
         raf = 0;
         currentText = '';
+        timeline = [];
+        pending.clear();
         shownText = false;
         overlay?.remove();
         overlay = null;
@@ -252,5 +377,5 @@
     };
   }
 
-  Object.assign((globalThis.spotslate ??= {}), { markCaptionBlock, createCaptions });
+  Object.assign((globalThis.spotslate ??= {}), { markCaptionBlock, createCaptions, parseTimedText });
 })();

@@ -406,7 +406,8 @@
   // on and off; with none showing there is nothing to translate.
   function applyCaptions() {
     if (settingsKnown && !siteMode.off && document.querySelector('#movie_player')) {
-      captions.start({ translate: translateLine, targetLang, onCue: onCaptionCue });
+      const id = new URL(location.href).searchParams.get('v') ?? '';
+      captions.start({ translate: translateLine, targetLang, onCue: onCaptionCue, videoId: id });
     } else {
       captions.stop();
     }

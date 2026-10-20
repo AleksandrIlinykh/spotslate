@@ -456,13 +456,21 @@ declare namespace SpotSlate {
     description: string;
   }
 
+  /** A caption cue from the timedtext timeline (content/youtube.js `parseTimedText`): a line and when it shows. */
+  interface Cue {
+    start: number;
+    end: number;
+    text: string;
+  }
+
   /** Dual subtitles on YouTube (content/youtube.js `createCaptions`). */
   interface Captions {
     /**
-     * Starts (or re-targets) watching the player; `translate(text)` resolves with the line's translation, and
-     * `onCue(text)` (optional) is told each new cue, so main.js can build the video's context.
+     * Starts (or re-targets) watching the player; `translate(text)` resolves with the line's translation, `onCue(text)`
+     * (optional) is told each new cue so main.js can build the video's context, and `videoId` (optional) resets the
+     * look-ahead timeline when the video changes.
      */
-    start(options: { translate: (text: string) => Promise<string>; targetLang: Lang; onCue?: (text: string) => void }): void;
+    start(options: { translate: (text: string) => Promise<string>; targetLang: Lang; onCue?: (text: string) => void; videoId?: string }): void;
     stop(): void;
   }
 }
@@ -563,8 +571,10 @@ interface SpotSlate {
   drawHero(hero: SpotSlate.Hero, host: HTMLElement, options?: { scale?: number }): SpotSlate.DrawnHero;
   /** content/hero.js: the companion by the mouse and on the popup; `spot()` says where it should be. */
   createHero(hero: SpotSlate.Hero, spot: () => SpotSlate.HeroSpot): SpotSlate.CompanionOnPage;
-  /** content/youtube.js: dual subtitles on YouTube (a translation line under each native caption). */
+  /** content/youtube.js: dual subtitles on YouTube (a translation line above the native caption). */
   createCaptions(): SpotSlate.Captions;
+  /** content/youtube.js: parse a timedtext json3 body into the cue timeline (for look-ahead). */
+  parseTimedText(json: string): SpotSlate.Cue[];
 }
 
 // Each content script adds its part when it runs, so the members are there only after their script.

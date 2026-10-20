@@ -70,6 +70,26 @@ test('dual subtitles: the video context is distilled from the metadata, then rid
     .toBe(true);
 });
 
+test('dual subtitles: a timedtext timeline warms the upcoming lines, so the shown line is ready without lag', async ({ page, server }) => {
+  await page.goto(`${server.url}/youtube-timeline.html`);
+  // Hand over a cue timeline, as content/youtube-timedtext.js would from the player's /api/timedtext response.
+  await page.evaluate(() => {
+    const body = JSON.stringify({
+      events: [
+        { tStartMs: 0, dDurationMs: 3000, segs: [{ utf8: 'the first spoken line' }] },
+        { tStartMs: 3000, dDurationMs: 3000, segs: [{ utf8: 'the second spoken line' }] },
+      ],
+    });
+    window.postMessage({ spotslate: 'spotslate-timedtext', body }, '*');
+  });
+  // The shown line (driven by the native caption, so it stays aligned) is translated.
+  await expect(page.locator('.spotslate-sub')).toContainText('[RU] the first spoken line');
+  // The upcoming line, not on screen yet, is translated ahead of time (warmed), so it will be a cache hit when it shows.
+  await expect
+    .poll(() => server.requests.some((request) => JSON.stringify(request.body).includes('the second spoken line')))
+    .toBe(true);
+});
+
 test('dual subtitles: an ad caption is not translated while the ad shows', async ({ page, server }) => {
   await page.goto(`${server.url}/youtube-captions.html`);
   await expect(page.locator('.spotslate-sub')).toContainText('[RU] What you have there is a person');

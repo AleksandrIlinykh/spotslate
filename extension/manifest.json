@@ -49,6 +49,12 @@
         "content/main.js"
       ],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content/youtube-timedtext.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "options_ui": { "page": "options.html", "open_in_tab": true },

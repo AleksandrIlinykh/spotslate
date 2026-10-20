@@ -45,6 +45,8 @@ With Chrome's translator (the default provider, `engine: 'browser'`) the page tr
 
 The content scripts are classic scripts, not modules. Each one is a function that runs once and adds what it offers to one shared object, `globalThis.spotslate`. Later scripts take what earlier ones added, so the order matters. It is kept in four places: `content_scripts` in `manifest.json`, `welcome.html` (all of them, checked by `tests/unit/manifest.test.js`), `compose.html` (the composer and what it needs) and `options.html` (Chrome's translator and the companions).
 
+One script stands apart: `content/youtube-timedtext.js` runs in the page's own world (`world: "MAIN"`, `run_at: "document_start"`, matched to `youtube.com`), the only place that sees the player's network. It wraps `XMLHttpRequest`/`fetch` to catch the caption timeline (`/api/timedtext`) and hands it to the isolated-world `youtube.js` by `postMessage` for the subtitle look-ahead. It shares nothing with `globalThis.spotslate` and reads only the public caption data.
+
 In the order Chrome loads them:
 
 | File | Adds | Role |
