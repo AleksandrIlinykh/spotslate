@@ -28,6 +28,14 @@ export function removeWord(vocabulary, lang, word) {
   return copy;
 }
 
+// Removes every word of `lang` (its whole list), dropping the language key.
+export function clearLanguage(vocabulary, lang) {
+  if (!vocabulary || !(lang in vocabulary)) return vocabulary;
+  const copy = { ...vocabulary };
+  delete copy[lang];
+  return copy;
+}
+
 // The language codes that have at least one word, so the view can show a tab per language.
 export function vocabularyLanguages(vocabulary) {
   return Object.keys(vocabulary ?? {}).filter((lang) => (vocabulary[lang]?.length ?? 0) > 0);

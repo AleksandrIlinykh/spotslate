@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_WORDS, addWord, removeWord, vocabularyLanguages } from '../../extension/lib/vocabulary.js';
+import { MAX_WORDS, addWord, clearLanguage, removeWord, vocabularyLanguages } from '../../extension/lib/vocabulary.js';
 
 test('addWord keeps a list per language, newest first, with no duplicates', () => {
   let vocab = {};
@@ -38,6 +38,12 @@ test('removeWord drops a word, and the language key when its list is empty', () 
   assert.deepEqual(removeWord(vocab, 'de', 'Katze'), { de: [{ word: 'Hund', date: 2 }], fr: [{ word: 'chat', date: 3 }] });
   assert.deepEqual(removeWord(vocab, 'fr', 'chat'), { de: vocab.de });
   assert.equal(removeWord(vocab, 'de', 'missing'), vocab, 'removing what is not there changes nothing');
+});
+
+test('clearLanguage drops a whole language, and leaves the rest and an unknown language alone', () => {
+  const vocab = { de: [{ word: 'Katze', date: 1 }], fr: [{ word: 'chat', date: 2 }] };
+  assert.deepEqual(clearLanguage(vocab, 'de'), { fr: [{ word: 'chat', date: 2 }] });
+  assert.equal(clearLanguage(vocab, 'it'), vocab, 'clearing a language that is not there changes nothing');
 });
 
 test('vocabularyLanguages lists only the languages that have words', () => {

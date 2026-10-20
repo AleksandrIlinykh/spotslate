@@ -95,3 +95,36 @@ test('the toolbar popup shows the vocabulary by language, copies the current one
   await expect(vocab.locator('.vocab-list')).toContainText('chat');
   await expect(vocab.locator('.vocab-list')).not.toContainText('Katze');
 });
+
+test('the vocabulary can be collapsed and expanded, and the choice is remembered', async ({ page, extensionId, serviceWorker }) => {
+  await serviceWorker.evaluate(() => chrome.storage.local.set({ vocabulary: { de: [{ word: 'Katze', date: 1 }] } }));
+  await page.goto(`chrome-extension://${extensionId}/compose.html`);
+  const vocab = page.locator('.vocab');
+  await expect(vocab.locator('.vocab-body')).toBeVisible();
+  await vocab.locator('.vocab-toggle').click();
+  await expect(vocab).toHaveClass(/collapsed/);
+  await expect(vocab.locator('.vocab-body')).toBeHidden();
+  // Reopening the popup keeps it collapsed.
+  await page.goto(`chrome-extension://${extensionId}/compose.html`);
+  await expect(page.locator('.vocab')).toHaveClass(/collapsed/);
+  await page.locator('.vocab-toggle').click();
+  await expect(page.locator('.vocab')).not.toHaveClass(/collapsed/);
+});
+
+test('Clear empties the current language after a confirm, leaving the others', async ({ page, extensionId, serviceWorker }) => {
+  await serviceWorker.evaluate(() =>
+    chrome.storage.local.set({ vocabulary: { de: [{ word: 'Katze', date: 1 }], fr: [{ word: 'chat', date: 2 }] } }),
+  );
+  await page.goto(`chrome-extension://${extensionId}/compose.html`);
+  const vocab = page.locator('.vocab');
+  await expect(vocab.locator('.vocab-list')).toContainText('Katze');
+  // One click arms Clear (it asks), a second clears the current language.
+  await vocab.locator('.vocab-clear').click();
+  await expect(vocab.locator('.vocab-clear')).toHaveClass(/confirming/);
+  await vocab.locator('.vocab-clear').click();
+  await expect(vocab.locator('.vocab-list')).not.toContainText('Katze');
+  await expect
+    .poll(() => serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => Object.keys(o.vocabulary ?? {}))))
+    .toEqual(['fr']);
+  await expect(vocab.locator('.vocab-list')).toContainText('chat'); // the view moved to the language left
+});

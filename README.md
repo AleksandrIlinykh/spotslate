@@ -107,7 +107,7 @@ Turn on YouTube's own captions (the CC button) and SpotSlate adds their translat
 
 Reading in a language you are learning, select a word and press Alt+A (or the shortcut you set under "Keys"): SpotSlate saves it, and a small note confirms. No translation is stored, just the word, filed under its language (the one detected, or the page's), so each language you read keeps its own list. The same word is not saved twice.
 
-Open the SpotSlate icon on the toolbar to see your words at the bottom of the window: a tab for each language, newest first. Remove any with the "×" next to it. "Copy" puts the chosen language's words on the clipboard, one per line, to paste wherever you keep them (a notes file, or Anki). The list keeps growing until you remove words; it stays on your computer and is never sent anywhere.
+Open the SpotSlate icon on the toolbar to see your words at the bottom of the window: a tab for each language, newest first. Click the "Vocabulary" header to collapse or expand the list (it is remembered). Remove a single word with the "×" next to it, or "Clear" the whole current language (it asks first). "Copy" puts the chosen language's words on the clipboard as a list, one per line, to paste wherever you keep them (a notes file, or Anki). The list keeps growing until you clear it; it stays on your computer and is never sent anywhere.
 
 ## On a site of your own
 

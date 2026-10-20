@@ -196,6 +196,8 @@ declare namespace SpotSlate {
     | { type: 'vocabulary' }
     /** Remove a word from the vocabulary, only from extension pages; answered with the vocabulary after. */
     | { type: 'remove-word'; lang: string; word: string }
+    /** Clear a whole language from the vocabulary (all of it when `lang` is omitted), extension pages only; answered with the vocabulary after. */
+    | { type: 'clear-vocabulary'; lang?: string }
     /** Opens a GitHub issue with the setup and the user's comment (never the text). From the popup or the composer. */
     | { type: 'report'; mode: 'text' | 'dictionary' | 'compose' | 'correction'; comment?: string }
     /** The language of a text Chrome's translator translated on the page, counted for the compose window. */

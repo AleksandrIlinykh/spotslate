@@ -5,7 +5,7 @@ import { readTextStream, sendChat } from './lib/chat.js';
 import { answerText, setupProblem } from './lib/providers.js';
 import { errorFromStatus, makeError, settingsChanged } from './lib/errors.js';
 import { LANGUAGES, activeProvider, loadSettings } from './lib/settings.js';
-import { addWord, removeWord } from './lib/vocabulary.js';
+import { addWord, clearLanguage, removeWord } from './lib/vocabulary.js';
 import { currentPlatform, readKeyName } from './lib/keys.js';
 import { DEFAULT_SITE_MODE, siteModeOf, withSiteMode } from './lib/sites.js';
 
@@ -202,6 +202,11 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
     if (own) removeFromVocabulary(message.lang, message.word).then(sendResponse);
     return Boolean(own);
   }
+  if (message?.type === 'clear-vocabulary') {
+    const own = sender.url?.startsWith(chrome.runtime.getURL(''));
+    if (own) clearVocabulary(message.lang).then(sendResponse);
+    return Boolean(own);
+  }
   if (message?.type === 'report') openReport({ mode: message.mode, comment: message.comment });
   if (message?.type === 'read-lang') {
     // A text the page translated by itself, with Chrome's translator: only its language is counted.
@@ -361,6 +366,13 @@ async function addToVocabulary(lang, word) {
 async function removeFromVocabulary(lang, word) {
   const vocabulary = await loadVocabulary();
   const next = removeWord(vocabulary, lang, word);
+  if (next !== vocabulary) await chrome.storage.local.set({ [VOCABULARY_KEY]: next });
+  return next;
+}
+
+async function clearVocabulary(lang) {
+  const vocabulary = await loadVocabulary();
+  const next = typeof lang === 'string' ? clearLanguage(vocabulary, lang) : {};
   if (next !== vocabulary) await chrome.storage.local.set({ [VOCABULARY_KEY]: next });
   return next;
 }
