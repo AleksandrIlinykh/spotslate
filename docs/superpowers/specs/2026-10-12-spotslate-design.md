@@ -518,6 +518,7 @@ Words the user saves while reading, to learn later. Select a word (on a page, or
 - The word's language is the detector's confident guess for it, else the page's declared language (`document.documentElement.lang`); without either, nothing is saved. So each language a person reads gets its own list.
 - The word goes to background in an `add-word` message. Background (which alone may read storage) keeps the vocabulary in `chrome.storage.local` under `vocabulary`, as `{ [lang]: [{ word, date }] }`, newest first, deduped, capped at `MAX_WORDS` per language (`lib/vocabulary.js`, `addWord`/`removeWord`/`vocabularyLanguages`). Only a plausible language code is accepted and a word is cut to 80 characters. It survives the browser closing.
 - On a save, `background` answers `{ added, word, lang }`; `main.js` shows a toast (`content/toast.js`, a plain element at the bottom of the page, not a shadow root since it shows only a public word) with `wordAdded` in the user's language. A duplicate answers `{ added: false }` and shows nothing.
+- The toolbar popup (`compose-page.js`) shows the vocabulary at the bottom: a tab per language that has words (its name from `languageName`), the words of the chosen language newest first, each with a remove (`remove-word`, extension pages only), and a Copy button that copies that language's words one per line to the clipboard (`copied` for a moment). Empty, it shows `vocabularyEmpty`.
 
 ## Cache
 
@@ -813,6 +814,7 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   186. A caption shown in two visual lines is sent as one line, its newline collapsed to a space, so it makes the same cache key as its timeline cue (and the look-ahead warming is a hit, not a miss).
   187. Selecting a word and pressing Alt+A saves it to the vocabulary under the page's language (`storage.local` `vocabulary`), with no translation, and a toast names the word.
   188. Alt+A on a word already saved does not add it again (no duplicate).
+  189. The toolbar popup shows the vocabulary by language; Copy copies the chosen language's words one per line, and a word can be removed.
   182. On a video page (with an AI provider), the subtitle context is distilled from the video's metadata (a non-streamed `video-context` build carrying the title and `<video>` block) and kept by video id; a later caption then carries that context as the `notes` of its translation request.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

@@ -30,7 +30,7 @@ if (site) {
 }
 const state = await chrome.runtime.sendMessage({ type: 'compose-open', site, pageLang: page?.pageLang ?? null });
 const send = (message) => chrome.runtime.sendMessage(message).catch(() => {});
-const { t } = globalThis.spotslate;
+const { t, languageName } = globalThis.spotslate;
 
 // The site's switch, the first thing in the window: SpotSlate on or off there; under it, with an AI provider, two small
 // switches, on unless the user turns them off there: translate with the AI (off: Chrome's translator, nothing sent),
@@ -93,3 +93,92 @@ globalThis.spotslate
     onClose: () => window.close(),
   })
   .focus();
+
+// The vocabulary at the bottom: the words saved with Alt+A, a tab per language, newest first, each removable, and a
+// Copy button that copies the current language's words one per line (no translation is kept).
+async function vocabularyPanel() {
+  const say = (key, params) => t(state.from, key, params);
+  const section = document.createElement('section');
+  section.className = 'vocab';
+  const head = document.createElement('div');
+  head.className = 'vocab-head';
+  const title = document.createElement('span');
+  title.className = 'vocab-title';
+  title.textContent = say('vocabulary');
+  const tabs = document.createElement('div');
+  tabs.className = 'vocab-langs';
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'vocab-copy';
+  copy.textContent = say('copy');
+  head.append(title, tabs, copy);
+  const list = document.createElement('ul');
+  list.className = 'vocab-list';
+  const empty = document.createElement('p');
+  empty.className = 'vocab-empty';
+  empty.textContent = say('vocabularyEmpty');
+  section.append(head, list, empty);
+
+  let data = (await chrome.runtime.sendMessage({ type: 'vocabulary' }).catch(() => ({}))) ?? {};
+  let current = '';
+  const languages = () => Object.keys(data).filter((lang) => data[lang]?.length);
+
+  function render() {
+    const langs = languages();
+    if (!langs.includes(current)) current = langs[0] ?? '';
+    const words = current ? (data[current] ?? []) : [];
+    empty.hidden = langs.length > 0;
+    tabs.hidden = copy.hidden = list.hidden = langs.length === 0;
+    tabs.replaceChildren(
+      ...langs.map((lang) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = lang === current ? 'vocab-lang current' : 'vocab-lang';
+        button.textContent = languageName(lang, state.from, { capitalized: true });
+        button.addEventListener('click', () => {
+          current = lang;
+          render();
+        });
+        return button;
+      }),
+    );
+    list.replaceChildren(
+      ...words.map((entry) => {
+        const item = document.createElement('li');
+        const word = document.createElement('span');
+        word.className = 'vocab-word';
+        word.textContent = entry.word;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'vocab-del';
+        remove.textContent = '×';
+        remove.title = entry.word;
+        remove.addEventListener('click', async () => {
+          const next = await chrome.runtime.sendMessage({ type: 'remove-word', lang: current, word: entry.word }).catch(() => null);
+          if (next) {
+            data = next;
+            render();
+          }
+        });
+        item.append(word, remove);
+        return item;
+      }),
+    );
+  }
+
+  copy.addEventListener('click', async () => {
+    const text = (data[current] ?? []).map((entry) => entry.word).join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      copy.textContent = say('copied');
+      setTimeout(() => (copy.textContent = say('copy')), 1200);
+    } catch {
+      // the clipboard was blocked: nothing to do
+    }
+  });
+
+  render();
+  return section;
+}
+
+document.body.append(await vocabularyPanel());
