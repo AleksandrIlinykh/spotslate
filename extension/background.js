@@ -5,6 +5,7 @@ import { readTextStream, sendChat } from './lib/chat.js';
 import { answerText, setupProblem } from './lib/providers.js';
 import { errorFromStatus, makeError, settingsChanged } from './lib/errors.js';
 import { LANGUAGES, activeProvider, loadSettings } from './lib/settings.js';
+import { addWord, removeWord } from './lib/vocabulary.js';
 import { currentPlatform, readKeyName } from './lib/keys.js';
 import { DEFAULT_SITE_MODE, siteModeOf, withSiteMode } from './lib/sites.js';
 
@@ -25,6 +26,9 @@ const VCTX_PREFIX = 'vctx:'; // + YouTube video id: that video's subtitle contex
 const LANGS_PREFIX = 'langs:'; // + site: { [lang]: count } of the texts read there, for the compose window
 const DRAFT_PREFIX = 'draft:'; // + site ('' off any site): the last draft written there, in chrome.storage.session
 const SITES_KEY = 'sites'; // { [site]: mode } in chrome.storage.local, see lib/sites.js
+const VOCABULARY_KEY = 'vocabulary'; // { [lang]: [{ word, date }] } in chrome.storage.local, see lib/vocabulary.js
+const MAX_WORD = 80; // a saved word is at most this long (a selection, not a paragraph)
+const LANG_CODE = /^[a-z]{2,3}(-[a-zA-Z]{2,4})?$/; // a plausible language code to file a word under
 const COMPOSE_KEY = 'compose'; // { targets: { [site]: lang }, last: lang } in chrome.storage.local
 
 // The settings hold API keys: only extension pages and this worker may read them, never content scripts.
@@ -183,6 +187,21 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
     videoContextFor(siteOf(sender), message).then(sendResponse);
     return true; // the answer comes later
   }
+  if (message?.type === 'add-word') {
+    // Alt+A on a selection: save the word under its language. Any page may add; only the word itself is stored.
+    addToVocabulary(message.lang, message.word).then(sendResponse);
+    return true;
+  }
+  if (message?.type === 'vocabulary') {
+    loadVocabulary().then(sendResponse);
+    return true;
+  }
+  if (message?.type === 'remove-word') {
+    // Only SpotSlate's own pages (the vocabulary view) delete a word.
+    const own = sender.url?.startsWith(chrome.runtime.getURL(''));
+    if (own) removeFromVocabulary(message.lang, message.word).then(sendResponse);
+    return Boolean(own);
+  }
   if (message?.type === 'report') openReport({ mode: message.mode, comment: message.comment });
   if (message?.type === 'read-lang') {
     // A text the page translated by itself, with Chrome's translator: only its language is counted.
@@ -324,6 +343,28 @@ async function updateNotes(site) {
 // number of times: once from the video's metadata when captions start, then a couple of refinements from the lines
 // seen, never on every line (the timing of subtitles does not allow it). It rides with each caption translation as
 // its `context`. Only with an AI provider and only while the site keeps its context (`site-mode`).
+// The vocabulary (lib/vocabulary.js): words saved with Alt+A, by language, in chrome.storage.local. Only extension
+// pages read storage, so the content script asks background to add and to read.
+async function loadVocabulary() {
+  return (await chrome.storage.local.get(VOCABULARY_KEY))[VOCABULARY_KEY] ?? {};
+}
+
+async function addToVocabulary(lang, word) {
+  if (typeof lang !== 'string' || !LANG_CODE.test(lang) || typeof word !== 'string') return { added: false };
+  const vocabulary = await loadVocabulary();
+  const next = addWord(vocabulary, lang, word.slice(0, MAX_WORD));
+  if (next === vocabulary) return { added: false }; // blank or already saved
+  await chrome.storage.local.set({ [VOCABULARY_KEY]: next });
+  return { added: true, word: next[lang][0].word, lang };
+}
+
+async function removeFromVocabulary(lang, word) {
+  const vocabulary = await loadVocabulary();
+  const next = removeWord(vocabulary, lang, word);
+  if (next !== vocabulary) await chrome.storage.local.set({ [VOCABULARY_KEY]: next });
+  return next;
+}
+
 async function videoNoteOf(videoId) {
   const key = VCTX_PREFIX + videoId;
   return (await chrome.storage.session.get(key))[key] ?? '';

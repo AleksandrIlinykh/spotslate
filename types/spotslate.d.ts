@@ -187,6 +187,12 @@ declare namespace SpotSlate {
     | { type: 'clear-notes'; site?: Site }
     /** A YouTube video's subtitle context, by id; answered with `{ text }`. From content/main.js when captions run. */
     | { type: 'video-context'; videoId: string; meta: VideoMeta; lines: string[] }
+    /** Save a selected word to the vocabulary, under its language. From content/main.js on Alt+A; answered with `{ added, word?, lang? }`. */
+    | { type: 'add-word'; word: string; lang: string }
+    /** Answered with the whole vocabulary `{ [lang]: [{ word, date }] }`. From the vocabulary view. */
+    | { type: 'vocabulary' }
+    /** Remove a word from the vocabulary, only from extension pages; answered with the vocabulary after. */
+    | { type: 'remove-word'; lang: string; word: string }
     /** Opens a GitHub issue with the setup and the user's comment (never the text). From the popup or the composer. */
     | { type: 'report'; mode: 'text' | 'dictionary' | 'compose' | 'correction'; comment?: string }
     /** The language of a text Chrome's translator translated on the page, counted for the compose window. */
@@ -456,6 +462,11 @@ declare namespace SpotSlate {
     description: string;
   }
 
+  /** A brief confirmation toast (content/toast.js `createToast`). */
+  interface Toast {
+    show(text: string): void;
+  }
+
   /** A caption cue from the timedtext timeline (content/youtube.js `parseTimedText`): a line and when it shows. */
   interface Cue {
     start: number;
@@ -573,6 +584,8 @@ interface SpotSlate {
   createHero(hero: SpotSlate.Hero, spot: () => SpotSlate.HeroSpot): SpotSlate.CompanionOnPage;
   /** content/youtube.js: dual subtitles on YouTube (a translation line above the native caption). */
   createCaptions(): SpotSlate.Captions;
+  /** content/toast.js: a brief confirmation at the bottom of the page (Alt+A saved a word). */
+  createToast(): SpotSlate.Toast;
   /** content/youtube.js: parse a timedtext json3 body into the cue timeline (for look-ahead). */
   parseTimedText(json: string): SpotSlate.Cue[];
 }
@@ -605,6 +618,8 @@ declare namespace chrome.storage {
     sites?: Record<SpotSlate.Site, Partial<SpotSlate.SiteMode>>;
     /** The compose window's languages: per site, and the last one chosen to write in. */
     compose?: { targets?: Record<SpotSlate.Site, SpotSlate.Lang>; sources?: Record<SpotSlate.Site, SpotSlate.Lang>; last?: SpotSlate.Lang };
+    /** Words saved with Alt+A, by language (lib/vocabulary.js). */
+    vocabulary?: Record<string, { word: string; date: number }[]>;
   }
 
   /** chrome.storage.session: kept until the browser closes. */

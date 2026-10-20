@@ -22,6 +22,7 @@
     createComposeWindow,
     createHero,
     createCaptions,
+    createToast,
     heroes,
     t,
   } = globalThis.spotslate;
@@ -49,6 +50,7 @@
   const highlight = createHighlight();
   const composeWindow = createComposeWindow();
   const captions = createCaptions();
+  const toast = createToast();
 
   let mouseX = null;
   let mouseY = null;
@@ -513,6 +515,25 @@
     );
   }
 
+  // Alt+A saves the selected word to the vocabulary. The physical A key, so it works in any layout; only Alt, so it
+  // does not clash with Ctrl+A (select all).
+  const isAddWordKey = (event) =>
+    event.isTrusted && event.altKey && event.code === 'KeyA' && !event.ctrlKey && !event.shiftKey && !event.metaKey;
+
+  // The word Alt+A saves: what is selected (on the page or, via the open popup, the phrase it is translating). Its
+  // language is the detector's confident guess for it, else the page's declared language; without either, nothing is
+  // saved. Only the word leaves the page, and only when the user presses the key.
+  async function addWord() {
+    const selected = (window.getSelection()?.toString() ?? '').replace(/\s+/g, ' ').trim();
+    const word = selected || (popup.isOpen() ? (shown?.text ?? '').replace(/\s+/g, ' ').trim() : '');
+    if (!word) return;
+    const detected = sourceLanguage(await detectLanguage(word));
+    const lang = detected ?? languageCode(document.documentElement.lang);
+    if (!lang) return;
+    const result = await chrome.runtime.sendMessage({ type: 'add-word', word, lang }).catch(() => null);
+    if (result?.added) toast.show(t(targetLang, 'wordAdded', { word: result.word }));
+  }
+
   // Whether the key held to read is down during `event`, and whether another modifier is.
   const readHeld = (event) => (keys.read === 'Control' ? event.ctrlKey : event.altKey);
   const otherModifiers = (event) => event.shiftKey || event.metaKey || (keys.read === 'Control' ? event.altKey : event.ctrlKey);
@@ -591,6 +612,13 @@
         event.stopImmediatePropagation();
         usedReadKey = true;
         if (!event.repeat) toggleCompose();
+        return;
+      }
+      if (!siteMode.off && isAddWordKey(event)) {
+        event.preventDefault(); // the page does not get the A
+        event.stopImmediatePropagation();
+        usedReadKey = true;
+        if (!event.repeat) addWord();
         return;
       }
       if (event.key === 'Escape' && popup.isOpen() && !popup.isPickerOpen()) closePopup(); // Esc closes the list first

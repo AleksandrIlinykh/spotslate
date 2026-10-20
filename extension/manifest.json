@@ -36,6 +36,7 @@
         "content/lang-picker.js",
         "content/popup.js",
         "content/highlight.js",
+        "content/toast.js",
         "content/correction.js",
         "content/composer.js",
         "content/compose-window.js",

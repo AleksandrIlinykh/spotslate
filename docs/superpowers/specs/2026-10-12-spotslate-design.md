@@ -510,6 +510,15 @@ While YouTube's captions show, SpotSlate shows their translation just above them
 - The subtitle context is per video, not per site (the site notes model does not fit: a video has one subject, and the timing of subtitles does not allow a rewrite on every line). With an AI provider, when captions start on a video `main.js` reads the video's metadata from the page DOM (`videoMeta`: title, channel, description; `getPlayerResponse` is out of reach from the isolated world) and asks background (`video-context`) to distil it into a note. The note is refined a couple of times (`VIDEO_REFINE_AT = [15, 40]` caption lines) from the lines seen, then left alone. Background keeps it by video id in `chrome.storage.session` (`vctx:<id>`, `videoContextFor`/`videoNoteOf`, built with `buildVideoContextMessages` in `lib/notes.js`). Each caption translation carries the video id over the `translate` port; background uses that video's note as the translation's `notes` (not the site's), does not teach the site notes or language counts from captions, and keys the cache by video id. When the video changes (`?v=`), `main.js` resets and starts a fresh context. The site being "no context" (toolbar) turns it off, as does the browser engine (nothing is sent, so no context).
 - Limits: there is no "translation only" mode; rolling auto-captions (whose DOM text is a window of two cues, not one) do not match a timeline cue, so they fall back to on-demand translation with the dim rather than look-ahead.
 
+## Vocabulary (Alt+A, content/main.js, lib/vocabulary.js)
+
+Words the user saves while reading, to learn later. Select a word (on a page, or the phrase the translation popup is showing) and press **Alt+A**: the word is saved, with a brief toast to confirm. No translation is stored, just the word.
+
+- The gesture is `Alt+A` (the physical `KeyA` with only Alt, so it does not clash with Ctrl+A), handled in `main.js` next to Alt+T. `addWord` takes the current selection, or the open popup's text when nothing is selected. Off on a site that is off.
+- The word's language is the detector's confident guess for it, else the page's declared language (`document.documentElement.lang`); without either, nothing is saved. So each language a person reads gets its own list.
+- The word goes to background in an `add-word` message. Background (which alone may read storage) keeps the vocabulary in `chrome.storage.local` under `vocabulary`, as `{ [lang]: [{ word, date }] }`, newest first, deduped, capped at `MAX_WORDS` per language (`lib/vocabulary.js`, `addWord`/`removeWord`/`vocabularyLanguages`). Only a plausible language code is accepted and a word is cut to 80 characters. It survives the browser closing.
+- On a save, `background` answers `{ added, word, lang }`; `main.js` shows a toast (`content/toast.js`, a plain element at the bottom of the page, not a shadow root since it shows only a public word) with `wordAdded` in the user's language. A duplicate answers `{ added: false }` and shows nothing.
+
 ## Cache
 
 In `content/main.js`: a `Map` from `[mode, text, context]` to translation, at most 100 entries (the oldest is evicted). Only successfully finished translations are stored. The cache is cleared when the settings change (the `settings-changed` message from background).
@@ -802,6 +811,8 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   184. While the player is `ad-showing`, the ad's own caption is not translated (the overlay clears and the ad text is never sent).
   185. A timedtext timeline (a `spotslate-timedtext` message) warms the upcoming lines ahead of the playhead, so a line just ahead is translated before it is shown (its text reaches the provider while an earlier line is on screen).
   186. A caption shown in two visual lines is sent as one line, its newline collapsed to a space, so it makes the same cache key as its timeline cue (and the look-ahead warming is a hit, not a miss).
+  187. Selecting a word and pressing Alt+A saves it to the vocabulary under the page's language (`storage.local` `vocabulary`), with no translation, and a toast names the word.
+  188. Alt+A on a word already saved does not add it again (no duplicate).
   182. On a video page (with an AI provider), the subtitle context is distilled from the video's metadata (a non-streamed `video-context` build carrying the title and `<video>` block) and kept by video id; a later caption then carries that context as the `notes` of its translation request.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

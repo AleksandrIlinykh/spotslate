@@ -156,6 +156,8 @@ To background, with `chrome.runtime.sendMessage`:
 | `set-site-mode` | `compose-page.js`, `options.js` (Reset) | the mode as saved |
 | `notes`, `clear-notes` | the context panel | the site's context; none |
 | `video-context` | `main.js` when captions run | a YouTube video's subtitle context `{ text }`, by id |
+| `add-word` | `main.js` on Alt+A | saved to the vocabulary by language; `{ added, word, lang }` |
+| `vocabulary`, `remove-word` | the vocabulary view | the whole vocabulary; the vocabulary after a delete |
 | `read-lang` | `main.js`, after Chrome's translator | none; counted for the site |
 | `report` | the popup's Report | none; opens a GitHub issue |
 | `open-options` | the popup's and the composer's gear | none |
@@ -186,6 +188,7 @@ Closing a port cancels the request: background aborts the `fetch`.
 | local | `settings` | `Settings`: provider, keys of every provider, language, keys to press, companion | settings page, welcome page, `set-target-lang` |
 | local | `sites` | the sites with a mode of their own | `set-site-mode` |
 | local | `compose` | the compose window's languages per site, and the last one | `compose-source`, `compose-target` |
+| local | `vocabulary` | words saved with Alt+A, by language | `add-word`, `remove-word` |
 | session | `notes:<site>` | the site context | background, after translations |
 | session | `vctx:<video id>` | a YouTube video's subtitle context | background, from the video metadata and lines |
 | session | `langs:<site>` | how many texts were read there in each language | background |
