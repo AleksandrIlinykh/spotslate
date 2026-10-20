@@ -5,16 +5,34 @@
 // and nothing is changed in the player's own requests.
 (() => {
   const TAG = 'spotslate-timedtext';
+  const READY = 'spotslate-timedtext-ready';
+  // The last few captured bodies, replayed when the isolated world says it is listening: the player can fetch the
+  // timeline before content/youtube.js has added its message listener, and a postMessage then would be lost.
+  const buffer = [];
 
-  function offer(url, body) {
-    if (typeof url !== 'string' || url.indexOf('/api/timedtext') === -1) return;
-    if (!body || /[?&]tlang=/.test(url)) return; // YouTube's own auto-translation: SpotSlate translates the original
+  function post(body) {
     try {
-      window.postMessage({ spotslate: TAG, body: String(body) }, window.location.origin);
+      window.postMessage({ spotslate: TAG, body }, window.location.origin);
     } catch {
       // a cross-origin or detached window: nothing to do
     }
   }
+
+  function offer(url, body) {
+    if (typeof url !== 'string' || url.indexOf('/api/timedtext') === -1) return;
+    if (!body || /[?&]tlang=/.test(url)) return; // YouTube's own auto-translation: SpotSlate translates the original
+    const text = String(body);
+    buffer.push(text);
+    if (buffer.length > 8) buffer.shift();
+    post(text);
+  }
+
+  // When content/youtube.js starts listening it pings; replay what was captured before it was ready.
+  window.addEventListener('message', (event) => {
+    if (event.source === window && event.data && event.data.spotslate === READY) {
+      for (const body of buffer) post(body);
+    }
+  });
 
   const urls = new WeakMap(); // XHR instance -> the URL it opened, read back when it loads
   const open = XMLHttpRequest.prototype.open;

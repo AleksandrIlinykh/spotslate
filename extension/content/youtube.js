@@ -12,7 +12,8 @@
 //    line). Instead the translation lives in one overlay of our own, appended to `#movie_player` (so it shows in
 //    fullscreen too) and positioned over the player just above the native caption window, tracking it. We never touch
 //    the native caption DOM, so the native line never moves because of us. The translation reads smaller and in a warm
-//    tint, to tell it from the original. A cue's text is translated once it settles (auto-captions stream word by
+//    cyan tint (a colour that stands apart from the white or yellow native captions), to tell it from the original. A
+//    cue's text is translated once it settles (auto-captions stream word by
 //    word), cached by line, and the previous translation stays on screen (dimmed) until the next one is ready, so there
 //    is no flicker between cues. Look-ahead: content/youtube-timedtext.js hands over the cue timeline, and the lines
 //    just ahead of the playhead are translated into the cache in advance, so the display (driven by the native caption,
@@ -71,7 +72,7 @@
     .${SUB_CLASS}.${STALE_CLASS} { opacity: 0.45; }
     .${SUB_CLASS} span {
       display: inline-block; padding: 0 0.5em; border-radius: 2px; font-size: 0.88em;
-      background: rgba(8, 8, 8, 0.75); color: #ffdf6b; opacity: 0.95;
+      background: rgba(8, 8, 8, 0.8); color: #7ad1ff; opacity: 0.95;
     }
     .${SUB_CLASS} .${WAIT_CLASS} { letter-spacing: 0.15em; animation: spotslate-sub-pulse 1.1s ease-in-out infinite; }
     @keyframes spotslate-sub-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.95; } }
@@ -342,6 +343,12 @@
         if (!onTimedText) {
           onTimedText = handleTimedText;
           window.addEventListener('message', onTimedText);
+        }
+        // Ask the MAIN-world script to replay any timeline it caught before this listener was ready (the start-up race).
+        try {
+          window.postMessage({ spotslate: 'spotslate-timedtext-ready' }, location.origin);
+        } catch {
+          // no window to post to: the look-ahead just will not warm; the DOM path still translates on demand
         }
         if (!observer) {
           injectStyle();
