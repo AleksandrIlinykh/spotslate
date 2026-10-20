@@ -534,18 +534,37 @@
     );
   }
 
-  // The word Alt+A saves: what is selected (on the page or, via the open popup, the phrase it is translating). Its
-  // language is the detector's confident guess for it, else the page's declared language; without either, nothing is
-  // saved. Only the word leaves the page, and only when the user presses the key.
+  // The word Alt+A saves: what is selected (on the page or, via the open popup, the phrase it is translating). Only the
+  // word leaves the page, and only when the user presses the key.
   async function addWord() {
-    const selected = (window.getSelection()?.toString() ?? '').replace(/\s+/g, ' ').trim();
+    const selection = window.getSelection();
+    const selected = (selection?.toString() ?? '').replace(/\s+/g, ' ').trim();
     const word = selected || (popup.isOpen() ? (shown?.text ?? '').replace(/\s+/g, ' ').trim() : '');
     if (!word) return;
-    const detected = sourceLanguage(await detectLanguage(word));
-    const lang = detected ?? languageCode(document.documentElement.lang);
-    if (!lang) return;
+    const lang = await wordLanguage(selection, word);
     const result = await chrome.runtime.sendMessage({ type: 'add-word', word, lang }).catch(() => null);
     if (result?.added) toast.show(t(targetLang, 'wordAdded', { word: result.word }));
+  }
+
+  // The language to file the word under. A lone word is hard to tell apart, so the sentence or paragraph it sits in
+  // decides it; failing that, the page's declared language, then the detector's best guess. It never gives up (a word
+  // dropped silently is why the gesture once seemed to do nothing): there is always a language, even if a low-confidence
+  // one, so the word is always saved and the toast always shows.
+  async function wordLanguage(selection, word) {
+    const context = selectionBlockText(selection) || word;
+    const results = await detectLanguage(context.slice(0, PAGE_SAMPLE_CHARS));
+    const guess = results?.[0]?.detectedLanguage;
+    return sourceLanguage(results) ?? languageCode(document.documentElement.lang) ?? (guess && languageCode(guess)) ?? 'und';
+  }
+
+  // The whole text of the block the selection is in, to tell the language from (far better than a lone word).
+  function selectionBlockText(selection) {
+    if (!selection || selection.rangeCount === 0) return '';
+    try {
+      return blockTextOf(selection.getRangeAt(0)) || '';
+    } catch {
+      return '';
+    }
   }
 
   // Whether the key held to read is down during `event`, and whether another modifier is.

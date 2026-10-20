@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures.js';
+import { test, expect, inContentScript, fakeBuiltInAI } from './fixtures.js';
 
 test.beforeEach(async ({ setSettings }) => {
   await setSettings({ targetLang: 'ru' });
@@ -16,6 +16,19 @@ test('Alt+A saves the selected word to the vocabulary, under the page language, 
   await expect
     .poll(() => serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => (o.vocabulary?.de ?? []).map((e) => e.word))))
     .toContain('Katze');
+});
+
+test('the word is filed by its sentence, not the lone word, and a page with no declared language still saves it', async ({ page, server, serviceWorker }) => {
+  await page.goto(`${server.url}/vocabulary-nolang.html`);
+  // The detector answers 'fr' for a sentence (20+ characters) and 'en' for a short one: the fix must use the sentence.
+  await inContentScript(page, fakeBuiltInAI({ language: 'fr', shortTextLanguage: 'en' }));
+  await page.locator('#word').dblclick();
+  await page.keyboard.press('Alt+a');
+  await expect
+    .poll(() => serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => (o.vocabulary?.fr ?? []).map((e) => e.word))))
+    .toContain('chat');
+  // Filed by the sentence (fr), not the lone short word (en); the page declares no language, yet nothing was dropped.
+  expect(await serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => o.vocabulary.en))).toBeUndefined();
 });
 
 test('Alt+A does not save the same word twice', async ({ page, server, serviceWorker }) => {
