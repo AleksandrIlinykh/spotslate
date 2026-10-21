@@ -307,7 +307,8 @@ declare namespace SpotSlate {
     open(target: Element | Range): void;
     /** `text` says what is going on, such as a download; the default is an ellipsis. */
     setLoading(text?: string): void;
-    setText(text: string): void;
+    /** With `lesson`, the text is a learning answer: the translation large and bold, the breakdown under a line. */
+    setText(text: string, options?: { lesson?: 'word' | 'sentence' | null }): void;
     /** A line instead of a translation, such as "already in your language". */
     setNotice(text: string): void;
     setError(message: string, options?: { action?: ProblemText['action'] }): void;
@@ -518,6 +519,9 @@ interface SpotSlate {
   isTextField(field: unknown): field is HTMLInputElement | HTMLTextAreaElement;
   /** content/block.js: the field to write in around a node or an event's target (a text field or a whole rich text editor), or null. */
   writableField(start: any): HTMLElement | null;
+
+  /** content/popup.js: a learning answer cut at its first "---" line into the translation and the breakdown. */
+  splitLesson(text: string): { head: string; rest: string };
 
   /** content/selection.js: the user's selection under a point, on the page or in the focused field. */
   selectionAt(x: number, y: number): SpotSlate.Picked | null;

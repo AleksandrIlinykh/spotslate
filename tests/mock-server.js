@@ -159,14 +159,14 @@ async function completions(req, res, { requests, notesRequests }, state, api) {
   const text = record.body.messages.at(-1).content;
   let translation = isCorrection(record.body) ? correctionOf(text) : `[RU] ${text}`;
   // The learning prompts (lib/prompt.js) ask for more: a sentence gets a breakdown after a '---' line, a dictionary
-  // word its forms and an example. The key picks nothing here; the system prompt does.
+  // word too, with its forms and an example. The key picks nothing here; the system prompt does.
   const system = String(record.body.system ?? record.body.messages[0].content);
   if (/Rewrite the user's text/.test(system)) {
     translation = `Reworded: ${text}`; // a rephrase of a finished translation (lib/compose.js)
+  } else if (/bilingual dictionary/.test(system) && !/Add nothing else\./.test(system)) {
+    translation += `\n---\nForms: ${text}, ${text}s\nExample: ${text} here`;
   } else if (!isCorrection(record.body) && /add a line containing exactly "---"/.test(system)) {
     translation += `\n---\nParts: subject, verb`;
-  } else if (/bilingual dictionary/.test(system) && !/Add nothing else\./.test(system)) {
-    translation += `\nForms: ${text}, ${text}s\nExample: ${text} here`;
   }
   const size = Math.ceil(translation.length / 3);
   const pause = key === 'slow' ? 1000 : 30;

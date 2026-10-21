@@ -69,6 +69,10 @@
       overflow-wrap: anywhere;
       user-select: text;
     }
+    .head { font-size: 15px; font-weight: 600; line-height: 1.4; }
+    .head.is-word { font-size: 22px; font-weight: 700; line-height: 1.25; }
+    .rest { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8dee4; font-size: 13px; opacity: 0.85; }
+    .rest[hidden] { display: none; }
     .popup.is-loading .text { animation: pulse 1s ease-in-out infinite; }
     .popup.is-error .text { color: #cf222e; }
     .popup.is-notice .text { opacity: 0.75; }
@@ -124,10 +128,20 @@
       .popup { border-color: #30363d; background: #161b22; color: #e6edf3; box-shadow: 0 8px 24px rgba(1, 4, 9, 0.6); }
       .bar, .foot { border-color: #30363d; background: #0d1117; }
       .popup.is-error .text { color: #ff7b72; }
+      .rest { border-color: #30363d; }
     }
   `;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+
+  // The learning mode's answer is the translation, a line with only dashes, then the breakdown. Until the line has come
+  // the whole text is the translation; a half-streamed line of dashes is kept out of it.
+  /** @type {SpotSlate['splitLesson']} */
+  function splitLesson(text) {
+    const separator = /^[ \t]*-{3,}[ \t]*$/m.exec(text);
+    if (!separator) return { head: text.replace(/\s*(?:^|\n)-{1,2}$/, '').trimEnd(), rest: '' };
+    return { head: text.slice(0, separator.index).trimEnd(), rest: text.slice(separator.index + separator[0].length).trim() };
+  }
 
   // The six dots that say "drag me", for the title rows of the windows that can be moved (dimmed by `.grip` rules).
   /** @type {SpotSlate['createGrip']} */
@@ -204,6 +218,9 @@
     bodyEl.className = 'body';
     const textEl = document.createElement('div');
     textEl.className = 'text';
+    const headEl = document.createElement('div'); // the translation of a lesson: large and bold
+    const restEl = document.createElement('div'); // its breakdown, under a line
+    restEl.className = 'rest';
     const actions = {
       openSettings: button('action settings', '', () => onOpenSettings()),
       retry: button('action retry', '', () => onRetry()),
@@ -231,6 +248,8 @@
     bar.addEventListener('pointerdown', startDrag);
     shadow.append(popupEl, notesSlot);
 
+    let raw = ''; // what the popup shows, as the model wrote it
+    let copyable = ''; // what Copy takes: the translation alone, without a lesson's breakdown
     let block = null;
     let side = 'above';
     let frame = 0;
@@ -262,8 +281,22 @@
 
     // action: 'settings', 'retry' or 'download' adds that button under an error.
     // A `notice` says something about the text instead of translating it: nothing to copy or report.
-    function render(text, { loading = false, error = false, notice = false, action = null } = {}) {
-      textEl.textContent = text;
+    // `lesson` ('word' or 'sentence') shows the text as a learning answer: the translation large and bold, the breakdown
+    // under a line (see `splitLesson`). Without it the text is one plain block.
+    function render(text, { loading = false, error = false, notice = false, action = null, lesson = null } = {}) {
+      raw = text;
+      copyable = text;
+      if (lesson) {
+        const { head, rest } = splitLesson(text);
+        headEl.className = `head is-${lesson}`;
+        headEl.textContent = head;
+        restEl.textContent = rest;
+        restEl.hidden = rest === '';
+        textEl.replaceChildren(headEl, restEl);
+        copyable = head;
+      } else {
+        textEl.textContent = text;
+      }
       popupEl.classList.toggle('is-loading', loading);
       popupEl.classList.toggle('is-error', error);
       popupEl.classList.toggle('is-notice', notice);
@@ -274,13 +307,13 @@
     }
 
     async function report() {
-      await onReport(textEl.textContent);
+      await onReport(raw);
       reportButton.textContent = globalThis.spotslate.t(lang, 'reportCopied');
       setTimeout(label, COPIED_MS);
     }
 
     async function copy() {
-      await writeClipboard(textEl.textContent);
+      await writeClipboard(copyable);
       copyButton.textContent = globalThis.spotslate.t(lang, 'copied');
       setTimeout(label, COPIED_MS);
     }
@@ -463,8 +496,8 @@
         render(text, { loading: true });
         schedulePosition();
       },
-      setText(text) {
-        render(text);
+      setText(text, { lesson = null } = {}) {
+        render(text, { lesson });
         schedulePosition();
       },
       setNotice(text) {
@@ -522,5 +555,5 @@
     };
   }
 
-  Object.assign((globalThis.spotslate ??= {}), { createPopup, createGrip });
+  Object.assign((globalThis.spotslate ??= {}), { createPopup, createGrip, splitLesson });
 })();
