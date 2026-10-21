@@ -215,7 +215,12 @@ test.describe('free built-in translator', () => {
   const pageSettings = (page) => page.evaluate(() => chrome.runtime.sendMessage({ type: 'page-settings' }));
 
   test('pages are told which engine translates, the keys and the companion', async ({ page, setSettings }) => {
-    const keys = { read: 'Alt', readName: 'Alt', write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' } };
+    const keys = {
+      read: 'Alt',
+      readName: 'Alt',
+      write: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyT' },
+      vocabulary: { ctrl: false, alt: true, shift: false, meta: false, code: 'KeyA' },
+    };
     const siteMode = { off: false, local: false, noContext: false }; // an extension page is on no site
     const languages = ['ru', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'uk', 'tr', 'zh', 'ja', 'ko']; // for the pickers
     await setSettings({ targetLang: 'de' });
