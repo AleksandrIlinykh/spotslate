@@ -47,7 +47,8 @@ export function buildMessages(text, languageName, { mode = 'text', context = '',
     `Reply in ${languageName}, in plain text only: on the first line give ` +
     (withContext ? 'the translation that fits the sentence it is from, given as reference' : 'the most common translation') +
     (learning
-      ? `. Then analyze the original word (the one the user wrote), not its translation: ${lesson} ${keepOriginal}`
+      ? ', and nothing else on that line (no notes, no context, no brackets). Then add a line containing exactly "---" and ' +
+        `then analyze the original word (the one the user wrote), not its translation: ${lesson} ${keepOriginal}`
       : '; then add up to three lines, one per sense, each as "part of speech: meanings", most common first. Add nothing else.');
   const translator =
     `You are a professional translator. Translate the user's text into ${languageName}. ` +

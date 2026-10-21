@@ -48,6 +48,23 @@ test('buildMessages in learning mode gives a richer dictionary entry with forms 
   assert.match(system.content, /example/i);
 });
 
+test('a learning dictionary entry gives the translation alone on the first line, then a "---" line, then the breakdown', () => {
+  const [system] = buildMessages('déclenché', 'Russian', { mode: 'dictionary', learning: true });
+  assert.match(system.content, /on the first line give the most common translation/);
+  assert.match(system.content, /nothing else on that line/i); // no notes or context beside the translation
+  const separator = system.content.indexOf('a line containing exactly "---"');
+  assert.ok(separator > system.content.indexOf('on the first line'));
+  assert.ok(separator < system.content.indexOf('analyze the original word'));
+  const [withContext] = buildMessages('déclenché', 'Russian', { mode: 'dictionary', learning: true, context: 'le coup de fil' });
+  assert.match(withContext.content, /nothing else on that line/i);
+  assert.ok(withContext.content.indexOf('a line containing exactly "---"') < withContext.content.indexOf('analyze the original word'));
+});
+
+test('a plain dictionary entry has no "---" line', () => {
+  const [system] = buildMessages('bank', 'Russian', { mode: 'dictionary' });
+  assert.doesNotMatch(system.content, /---/);
+});
+
 test('the learning breakdown is of the original word, with forms and examples kept in its language and examples translated', () => {
   const [dict] = buildMessages('Schritt', 'Russian', { mode: 'dictionary', learning: true });
   assert.match(dict.content, /analyze the original word.*not its translation/i);
