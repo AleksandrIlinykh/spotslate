@@ -260,7 +260,7 @@
   function load() {
     const cached = cache.get(cacheKey(shown));
     if (cached === undefined) translate(shown);
-    else popup.setText(cached);
+    else popup.setText(cached, { lesson: lessonOf(shown) });
   }
 
   // A bad translation: GitHub gets only the setup, from background; the text and its translation go to the clipboard,
@@ -275,6 +275,12 @@
     if (!shown || !popup.isOpen()) return;
     popup.setLoading();
     translate(shown);
+  }
+
+  // A learning answer is laid out as a translation and its breakdown: a word's translation large, a sentence's less so.
+  function lessonOf({ mode, learning }) {
+    if (!learning) return null;
+    return mode === 'dictionary' ? 'word' : 'sentence';
   }
 
   function cacheKey({ mode, text, context, learning }) {
@@ -299,7 +305,7 @@
       if (port !== current) return;
       if (message.type === 'chunk') {
         result += message.text;
-        popup.setText(result);
+        popup.setText(result, { lesson: lessonOf(request) });
       } else if (message.type === 'done') {
         remember(cache, cacheKey(request), result);
         disconnect();

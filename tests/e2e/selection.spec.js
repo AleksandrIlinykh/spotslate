@@ -1,4 +1,4 @@
-import { test, expect, moveTo, popupText, say } from './fixtures.js';
+import { test, expect, moveTo, popupText, popupRoot, say } from './fixtures.js';
 
 const P1 = 'The quick brown fox jumps over the lazy dog. Read more';
 const outline = (page) => page.locator('#spotslate-highlight');
@@ -47,9 +47,9 @@ test('in learning mode a selected sentence gets a grammar breakdown after the tr
   await setSettings({ learning: true });
   await page.goto(`${server.url}/page.html`);
   await altOver(page, await select(page, '#p1', 0, 44));
-  await expect(popupText(page)).toContainText('[RU] The quick brown fox jumps over the lazy dog.');
-  await expect(popupText(page)).toContainText('---');
-  await expect(popupText(page)).toContainText('Parts: subject, verb');
+  await expect(popupText(page).locator('.head')).toHaveText('[RU] The quick brown fox jumps over the lazy dog.');
+  await expect(popupText(page).locator('.rest')).toHaveText('Parts: subject, verb');
+  await expect(popupText(page)).not.toContainText('---'); // the separator is a line, not text
   const system = server.requests[0].body.messages[0].content;
   expect(system).toContain('breakdown');
   expect(system).toMatch(/analyze the original sentence, not its translation/);
@@ -60,8 +60,8 @@ test('a custom learning instruction is used in the request, and the breakdown st
   await setSettings({ learning: true, learningPrompt: 'only the gender and the plural' });
   await page.goto(`${server.url}/page.html`);
   await altOver(page, await select(page, '#p1', 0, 44));
-  await expect(popupText(page)).toContainText('[RU] The quick brown fox jumps over the lazy dog.');
-  await expect(popupText(page)).toContainText('---');
+  await expect(popupText(page).locator('.head')).toHaveText('[RU] The quick brown fox jumps over the lazy dog.');
+  await expect(popupText(page).locator('.rest')).toHaveText('Parts: subject, verb');
   const [{ body }] = server.requests;
   expect(body.messages[0].content).toContain('only the gender and the plural');
   expect(body.messages[0].content).not.toContain('part of speech and base form'); // the default is replaced
@@ -71,10 +71,37 @@ test('in learning mode a selected word gets its forms and an example', async ({ 
   await setSettings({ learning: true });
   await page.goto(`${server.url}/page.html`);
   await altOver(page, await select(page, '#p1', 4, 9));
-  await expect(popupText(page)).toContainText('[RU] quick');
-  await expect(popupText(page)).toContainText('Forms: quick');
-  await expect(popupText(page)).toContainText('Example: quick here');
-  expect(server.requests[0].body.messages[0].content).toContain('bilingual dictionary');
+  await expect(popupText(page).locator('.head')).toHaveText('[RU] quick');
+  await expect(popupText(page).locator('.rest')).toContainText('Forms: quick');
+  await expect(popupText(page).locator('.rest')).toContainText('Example: quick here');
+  await expect(popupText(page)).not.toContainText('---');
+  const system = server.requests[0].body.messages[0].content;
+  expect(system).toContain('bilingual dictionary');
+  expect(system).toContain('a line containing exactly "---"');
+});
+
+test('in learning mode the translation of a word is larger and bolder than its breakdown, and Copy takes the translation alone', async ({ page, context, server, setSettings }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: server.url });
+  await setSettings({ learning: true });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 4, 9));
+  const head = popupText(page).locator('.head');
+  const rest = popupText(page).locator('.rest');
+  await expect(rest).toContainText('Forms: quick');
+  const look = (locator) => locator.evaluate((el) => ({ size: parseFloat(getComputedStyle(el).fontSize), weight: Number(getComputedStyle(el).fontWeight) }));
+  const [headLook, restLook] = [await look(head), await look(rest)];
+  expect(headLook.size).toBeGreaterThan(restLook.size * 1.5);
+  expect(headLook.weight).toBeGreaterThanOrEqual(700);
+  expect(restLook.weight).toBeLessThan(headLook.weight);
+  await popupRoot(page).locator('.popup').hover();
+  await popupRoot(page).locator('.copy').click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('[RU] quick');
+});
+
+test('a plain translation is one block without the lesson layout', async ({ page }) => {
+  await altOver(page, await select(page, '#p1', 4, 25));
+  await expect(popupText(page)).toHaveText('[RU] quick brown fox jumps');
+  await expect(popupText(page).locator('.head')).toHaveCount(0);
 });
 
 test('in learning mode Alt over a paragraph stays a plain translation with no breakdown', async ({ page, server, setSettings }) => {
