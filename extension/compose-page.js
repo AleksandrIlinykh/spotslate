@@ -1,5 +1,5 @@
-// The toolbar popup (and its keyboard shortcut): first the switch for the active tab's site, then the compose window
-// on its own, for writing that goes anywhere. The site's context and the language read there come from background,
+// The toolbar popup (and its keyboard shortcut): first the switch for the active tab's site, on a tab showing a PDF a
+// button to read it in SpotSlate's reader, then the compose window on its own, for writing that goes anywhere. The site's context and the language read there come from background,
 // its declared language from the tab. Tests open it as a page with ?tab= naming the tab it is for.
 
 function siteOf(url) {
@@ -8,6 +8,15 @@ function siteOf(url) {
     return protocol === 'http:' || protocol === 'https:' ? host : null;
   } catch {
     return null;
+  }
+}
+
+function pathOf(url) {
+  try {
+    const { protocol, pathname } = new URL(url);
+    return ['http:', 'https:', 'file:'].includes(protocol) ? pathname : '';
+  } catch {
+    return '';
   }
 }
 
@@ -73,7 +82,23 @@ function siteRow() {
   return row;
 }
 
-if (site) document.body.prepend(siteRow());
+// On a tab showing a PDF, a button to read it in SpotSlate's reader, next to the tab: Chrome's viewer gives SpotSlate
+// no text. The tab says when it shows one (its content script); a file, or a tab with no content script, by its address.
+function pdfRow() {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'pdf-here';
+  row.textContent = t(state.from, 'readThisPdf');
+  row.addEventListener('click', async () => {
+    const url = chrome.runtime.getURL(`pdf.html?src=${encodeURIComponent(tab.url)}`);
+    await chrome.tabs.create({ url, index: tab.index + 1 });
+    window.close();
+  });
+  return row;
+}
+
+const showsPdf = page?.pdf || /\.pdf$/i.test(pathOf(tab?.url));
+document.body.prepend(...[site && siteRow(), showsPdf && pdfRow()].filter(Boolean));
 
 globalThis.spotslate
   .createComposer({

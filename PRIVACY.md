@@ -26,7 +26,7 @@ SpotSlate does not read or send anything until you hold Alt, write in its compos
 - **An AI provider you choose** (for example DeepSeek, OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, xAI or Alibaba Qwen): the text goes in an HTTPS request from your browser directly to the provider's API, with your own API key. The provider's privacy policy and terms then apply to it; please read them before choosing a provider. The settings page says, under the provider you pick, that the texts go to it.
 - **A local server** (Ollama, LM Studio, or another API URL on `localhost`): the text goes to that server on your computer.
 - **An API URL you enter yourself**: the text goes to that address, and Chrome asks you first whether SpotSlate may reach it.
-- **A local PDF you open in SpotSlate's reader**: the file stays on your computer and is never uploaded; only a paragraph you hold Alt over is translated, the same way and to the same place as on a web page.
+- **A PDF you open in SpotSlate's reader**: a file you pick or drop stays on your computer and is never uploaded. A PDF that a tab shows, opened in the reader from the toolbar window, is downloaded again from its address, without your cookies, and only after you allow SpotSlate to read that site (Chrome asks you). Only a paragraph you hold Alt over is translated, the same way and to the same place as on a web page.
 - **"Report" on the popup or in the compose window**: it opens a new GitHub issue in your browser with the SpotSlate version, the translator and model, the language and your browser's user agent, and copies the text and its translation to your clipboard. Nothing is sent until you submit the issue yourself, and the text goes there only if you paste it.
 - **When you remove SpotSlate**: Chrome opens a short form on GitHub about why, with only the SpotSlate version in its address; you can close it without answering.
 
@@ -45,7 +45,7 @@ SpotSlate sends nothing anywhere else: no analytics, telemetry, crash reports or
 
 - **Storage**: to keep your settings and the translation cache.
 - **Active tab**: when you open the compose window from the toolbar, to know which site you are on, so the window can use what you read there. It gives no access to the page otherwise.
-- **Access to the APIs of the preset providers, `localhost` and `127.0.0.1`**: to send the text you ask to translate to the provider you chose. Access to any other API address is asked for only when you enter one.
+- **Access to the APIs of the preset providers, `localhost` and `127.0.0.1`**: to send the text you ask to translate to the provider you chose. Access to any other site is asked for only when you need it: an API address you enter, or the site of a PDF you open in SpotSlate's reader from its tab.
 - **Modifying requests to `localhost` (declarativeNetRequest)**: requests that SpotSlate itself sends to a local server carry a local `Origin` header, so that Ollama accepts them without extra setup. No other requests are touched.
 - **Running on all sites**: to show the outline and the translation where you hold Alt. Until you do, it only follows the mouse and listens for the Alt key, and with the built-in translator, for your first click as described above. What it sees stays on the page.
 

@@ -25,6 +25,13 @@
     .switch.small { width: 26px; height: 14px; border-radius: 7px; }
     .switch.small::after { width: 10px; height: 10px; }
     .switch.small:checked::after { transform: translateX(12px); }
+    /* On a tab showing a PDF: the button that opens it in SpotSlate's reader. */
+    .pdf-here { appearance: none; width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+      border: none; border-bottom: 1px solid #d8dee4; background: #ddf4ff; color: inherit; font: inherit;
+      font-weight: 600; text-align: left; cursor: pointer; }
+    .pdf-here::before { content: '\1F4C4'; font-weight: normal; }
+    .pdf-here:hover { background: #c8ebff; }
+    .pdf-here:focus-visible { outline: 2px solid #1f6feb; outline-offset: -2px; }
     /* The vocabulary: words saved with Alt+A, by language, collapsible, with Copy and Clear. */
     .vocab { border-top: 1px solid #d8dee4; }
     .vocab-toggle { appearance: none; width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px;
@@ -53,6 +60,8 @@
     @media (prefers-color-scheme: dark) {
       body { background: #161b22; color: #e6edf3; }
       .site { border-color: #30363d; background: #0d1117; }
+      .pdf-here { border-color: #30363d; background: #121d2f; }
+      .pdf-here:hover { background: #17284a; }
       .switch { background: #6e7681; }
       .switch:checked { background: #2ea043; }
       .vocab { border-color: #30363d; }

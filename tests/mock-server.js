@@ -23,7 +23,7 @@ const SSE = {
 const STREAM_END = { openai: 'data: [DONE]\n\n', anthropic: 'event: message_stop\ndata: {"type":"message_stop"}\n\n' };
 
 // Fake OpenAI-compatible API (POST /chat/completions, GET /models), fake Anthropic Messages API (POST /messages)
-// and the fixture pages, on a random local port.
+// and the fixture pages and PDFs, on a random local port.
 // The API key picks the behaviour: bad → 401, broke → 402, empty → no text,
 // slow → one chunk per second, late → the first chunk after 1.5 seconds, split → a four-byte emoji cut between writes,
 // flaky → 500 on the first request and normal answers after it,
@@ -66,6 +66,11 @@ async function handle(req, res, records, state) {
   } else if (req.method === 'GET' && /^\/[\w-]+\.html$/.test(pathname)) {
     const html = await readFile(new URL(pathname.slice(1), FIXTURES));
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(html);
+  } else if (req.method === 'GET' && /^\/(?:[\w-]+\.pdf|pdf\/[\w-]+)$/.test(pathname)) {
+    // A fixture PDF, at its name or (as arXiv serves papers) at /pdf/<name> with no .pdf in the address.
+    const name = pathname.replace(/^\/(?:pdf\/)?/, '').replace(/\.pdf$/, '');
+    const pdf = await readFile(new URL(`${name}.pdf`, FIXTURES));
+    res.writeHead(200, { 'Content-Type': 'application/pdf' }).end(pdf);
   } else if (req.method === 'GET' && req.url === '/models') {
     listModels(req, res);
   } else if (req.method === 'POST' && req.url === '/chat/completions') {

@@ -221,7 +221,7 @@ declare namespace SpotSlate {
     | { type: 'site-mode-changed'; site: Site; siteMode: SiteMode }
     /** To the site's tabs and to extension pages while and after the context is rewritten. */
     | ({ type: 'notes-changed' } & Notes)
-    /** From the toolbar window to the active tab, answered with `{ pageLang }` (its `<html lang>`). */
+    /** From the toolbar window to the active tab, answered with `{ pageLang, pdf }`: its `<html lang>`, and whether it shows a PDF. */
     | { type: 'compose-context' };
 
   /** Port 'translate': content/main.js asks background to translate one text with the AI provider. */
