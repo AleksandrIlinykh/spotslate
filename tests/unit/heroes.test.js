@@ -13,7 +13,7 @@ const distinct = (frames) => new Set(frames.map((rows) => rows.join('\n'))).size
 
 test('the companions to choose from are the heroes there are', () => {
   assert.deepEqual(Object.keys(heroes).sort(), [...COMPANIONS].sort());
-  assert.deepEqual(COMPANIONS, ['pup', 'cat', 'corgi', 'monkey']);
+  assert.deepEqual(COMPANIONS, ['pup', 'cat', 'corgi', 'monkey', 'chimp']);
 });
 
 test('every hero has a dance and a rest, each a loop of frames, and a name', () => {
@@ -57,16 +57,33 @@ test('the things a hero does now and then are animations of its own, apart from 
   }
 });
 
-test('Spot keeps to its dance and rest, the cat licks itself and yawns, the corgi wiggles its rear', () => {
+test('Spot and Bobo keep to their dance and rest, the cat licks itself and yawns, the corgi wiggles its rear', () => {
   assert.equal(heroes.pup.fidgets, undefined);
   assert.deepEqual(heroes.cat.fidgets, ['lick', 'yawn']);
   assert.deepEqual(heroes.corgi.fidgets, ['wiggle']);
   assert.deepEqual(heroes.monkey.fidgets, ['panic']);
+  assert.equal(heroes.chimp.fidgets, undefined);
 });
 
 test('the corgi dances with its back turned, so none of its dance looks like its rest', () => {
   const rest = new Set(heroes.corgi.animations.idle.frames.map((rows) => rows.join('\n')));
   for (const rows of heroes.corgi.animations.dance.frames) assert.ok(!rest.has(rows.join('\n')));
+});
+
+// The lowest row with a colored cell: where the feet are.
+const feet = (rows) => rows.findLastIndex((row) => /[^.]/.test(row));
+
+test('Bobo holds its head and worries instead of jumping: its feet never leave the ground, and both hands are up', () => {
+  const { chimp, monkey } = heroes;
+  assert.equal(chimp.name, 'Bobo');
+  const ground = feet(chimp.animations.idle.frames[0]);
+  for (const rows of chimp.animations.dance.frames) assert.equal(feet(rows), ground);
+  assert.ok(monkey.animations.dance.frames.some((rows) => feet(rows) < ground), 'Momo does jump');
+  // Hands at the head: a raised arm reaches the outer two columns, which an arm hanging down never does.
+  for (const rows of chimp.animations.dance.frames) {
+    assert.ok(rows.some((row) => /[^.]/.test(row.slice(0, 2))), 'left hand');
+    assert.ok(rows.some((row) => /[^.]/.test(row.slice(-2))), 'right hand');
+  }
 });
 
 test('a fidget ends as the hero rests, so going back to the rest does not jump', () => {

@@ -1,5 +1,5 @@
-// Momo, a monkey: a companion drawn from parts (content/pixels.js) like Spot. It jumps while it waits, and now and
-// then, resting, it grabs its head with both hands.
+// Momo and Bobo, two monkeys: companions drawn from the same parts (content/pixels.js) like Spot. Momo jumps while it
+// waits, and now and then, resting, grabs its head with both hands. Bobo never jumps: it holds its head, worried.
 (() => {
   const { drawFrame, mirror, withRows } = globalThis.spotslate.pixels;
   const WIDTH = 16;
@@ -23,22 +23,30 @@
   // Wide eyes and an open mouth: hands at its head.
   const PANIC_HEAD = withRows(HEAD, { 5: '.kbwkffkwbk.', 6: '.kbfkkkkfbk.' });
 
+  // Bobo's face: wide eyes under brows arched in worry and a mouth turned down.
+  const WORRIED_HEAD = withRows(HEAD, { 3: 'kfkbbddbbkfk', 4: 'kfkbdffdbkfk', 5: '.kbwkffkwbk.', 6: '.kbffddffbk.', 7: '..kbdffdbk..' });
+  const WORRIED_BLINK_HEAD = withRows(WORRIED_HEAD, { 5: '.kbwdffdwbk.' });
+  // A drop of sweat at the temple.
+  const SWEAT = ['.s', 'ss'];
+
   // The chest, belly, legs and feet, one row each; `chest` rows of chest.
   const body = (chest) => [...Array(chest).fill('kbffbk'), 'kbbbbk', 'kbkkbk', 'kkkkkk'];
   const ARM_DOWN = ['.kk', 'kbk', 'kfk', '.k.'];
   const ARM_UP = ['.k...', 'kfk..', 'kbk..', '.kbk.', '..kbk', '...kk'];
 
-  // The whole monkey: `pose` is 'crouch', 'stand' or 'jump', `arms` 'down', 'left', 'right' or 'both' (raised).
-  function monkey({ pose = 'stand', arms = 'down', head = HEAD }) {
+  // The whole monkey: `pose` is 'crouch', 'stand' or 'jump', `arms` 'down', 'left', 'right' or 'both' (raised); `shake`
+  // moves the head, and the hands raised to it, sideways by that many cells, and `sweat` adds a drop at its temple.
+  function monkey({ pose = 'stand', arms = 'down', head = HEAD, shake = 0, sweat = false }) {
     const top = { crouch: 3, stand: 2, jump: 1 }[pose];
     const chest = pose === 'crouch' ? 1 : 2;
     const bodyTop = top + 9;
     const left = arms === 'left' || arms === 'both';
     const right = arms === 'right' || arms === 'both';
     /** @type {[SpotSlate.Part, number, number][]} */
-    const layers = [[head, 2, top], [body(chest), 5, bodyTop]];
-    layers.push(left ? [ARM_UP, 0, top + 4] : [ARM_DOWN, 3, bodyTop]);
-    layers.push(right ? [mirror(ARM_UP), 11, top + 4] : [mirror(ARM_DOWN), 10, bodyTop]);
+    const layers = [[head, 2 + shake, top], [body(chest), 5, bodyTop]];
+    layers.push(left ? [ARM_UP, 0 + shake, top + 4] : [ARM_DOWN, 3, bodyTop]);
+    layers.push(right ? [mirror(ARM_UP), 11 + shake, top + 4] : [mirror(ARM_DOWN), 10, bodyTop]);
+    if (sweat) layers.push([SWEAT, 14, top + 1]);
     return drawFrame(WIDTH, HEIGHT, layers);
   }
 
@@ -78,6 +86,31 @@
     fidgets: ['panic'],
   };
 
+  const resting = monkey({ head: WORRIED_HEAD });
+  const bobo = {
+    name: 'Bobo',
+    width: WIDTH,
+    height: HEIGHT,
+    // The colors of the picture it comes from: grey-tan hair, rosy grey skin, near black outlines, a cool light for the sweat.
+    palette: { k: '#1a1516', b: '#927c73', f: '#b99a97', w: '#ddd3d4', d: '#4d3f3f', s: '#a9b1c9' },
+    animations: {
+      // Both hands on its head, shaking it left and right and bobbing, a drop of sweat on its temple.
+      dance: {
+        fps: 6,
+        frames: [
+          monkey({ arms: 'both', head: WORRIED_HEAD, shake: -1 }),
+          monkey({ arms: 'both', pose: 'crouch', head: WORRIED_HEAD, sweat: true }),
+          monkey({ arms: 'both', head: WORRIED_HEAD, shake: 1 }),
+          monkey({ arms: 'both', pose: 'crouch', head: WORRIED_HEAD }),
+        ],
+      },
+      idle: {
+        fps: 4,
+        frames: [resting, resting, resting, resting, monkey({ head: WORRIED_BLINK_HEAD }), resting],
+      },
+    },
+  };
+
   const spotslate = (globalThis.spotslate ??= {});
-  spotslate.heroes = { ...spotslate.heroes, monkey: momo };
+  spotslate.heroes = { ...spotslate.heroes, monkey: momo, chimp: bobo };
 })();

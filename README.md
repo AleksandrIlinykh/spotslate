@@ -19,7 +19,7 @@ What it does:
 - **Learn the site**: with an AI provider, each site gets a short context of its subject and terms, so they come out the same way every time.
 - **Your choice of engine**: Chrome's built-in translator (free, nothing leaves your computer) or an AI model of your own, under your own key.
 - **Per site**: turn SpotSlate off, or keep a site to Chrome's translator, from the toolbar window.
-- **A companion**: Spot the shiba, Ink the black cat, Biscuit the corgi or Momo the monkey keeps you company by the mouse and on the translation, or no one; pick in the settings.
+- **A companion**: Spot the shiba, Ink the black cat, Biscuit the corgi, Momo the monkey or Bobo the worried monkey keeps you company by the mouse and on the translation, or no one; pick in the settings.
 
 Keys and gestures out of the box (on a Mac, Alt is Option):
 
@@ -97,7 +97,7 @@ The full [privacy policy](PRIVACY.md) explains it in detail. With the built-in t
 - One SpotSlate window at a time: a translation popup puts the compose window away (your draft stays), and the compose window closes the popup.
 - A text translated once is reused in every tab until the browser closes: instant and free.
 - SpotSlate speaks the language you translate into: its hints, buttons, errors and windows follow the "Translate into" setting.
-- A little pixel companion keeps you company: it dances next to the mouse while you hold Alt, sits down when the translation is ready, and hops onto the popup when you let Alt go. Spot the shiba dances with a paw up; Ink the black cat kneads, and now and then licks a paw, washes its face or yawns; Biscuit the corgi turns round and wiggles its rear; Momo the monkey jumps and grabs its head. Pick one, or no one, under "Companion" in the settings. It never gets in the way of the mouse, and stands still if your system asks for reduced motion.
+- A little pixel companion keeps you company: it dances next to the mouse while you hold Alt, sits down when the translation is ready, and hops onto the popup when you let Alt go. Spot the shiba dances with a paw up; Ink the black cat kneads, and now and then licks a paw, washes its face or yawns; Biscuit the corgi turns round and wiggles its rear; Momo the monkey jumps and grabs its head; Bobo the other monkey never jumps, it holds its head, worried. Pick one, or no one, under "Companion" in the settings. It never gets in the way of the mouse, and stands still if your system asks for reduced motion.
 
 ## Subtitles on YouTube
 
