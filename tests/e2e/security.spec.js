@@ -1,4 +1,4 @@
-import { test, expect, altHover, moveTo, popupText, EXTENSION_PATH } from './fixtures.js';
+import { test, expect, altHover, moveTo, popupText, inContentScript, EXTENSION_PATH } from './fixtures.js';
 
 test.beforeEach(async ({ setSettings }) => {
   await setSettings();
@@ -31,6 +31,30 @@ test('a fake mouse move cannot redirect a real Alt to another paragraph', async 
   await expect(popupText(page)).toContainText('[RU] Our team');
 });
 
+test('a fake mousedown does not close the popup', async ({ page, server }) => {
+  await page.goto(`${server.url}/long.html`);
+  await altHover(page, '#long');
+  await expect(popupText(page)).toContainText('[RU]');
+  await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 5, clientY: 5 })));
+  await page.waitForTimeout(300);
+  await expect(page.locator('#spotslate-root')).toHaveCount(1);
+});
+
+test('dual subtitles do not run off YouTube: a page on another site with a player and captions sends nothing', async ({ page, server }) => {
+  // The test copy of the extension allows 127.0.0.1 next to YouTube; localhost is the same server at another name.
+  await page.goto(`${server.url.replace('127.0.0.1', 'localhost')}/youtube-captions.html`);
+  await page.waitForTimeout(1500);
+  await expect(page.locator('.spotslate-sub')).toHaveCount(0);
+  expect(server.requests).toHaveLength(0);
+});
+
+test('a content script cannot read the vocabulary; only the extension pages can', async ({ page, server, serviceWorker }) => {
+  await serviceWorker.evaluate(() => chrome.storage.local.set({ vocabulary: { de: [{ word: 'Katze', date: 1 }] } }));
+  await page.goto(`${server.url}/long.html`);
+  const answer = await inContentScript(page, "chrome.runtime.sendMessage({ type: 'vocabulary' })");
+  expect(answer).toBeUndefined();
+});
+
 test.describe('the extension as shipped', () => {
   test.use({ extensionPath: EXTENSION_PATH });
 
@@ -47,5 +71,12 @@ test.describe('the extension as shipped', () => {
     await page.keyboard.press('Alt+KeyT');
     await expect(page.locator('#spotslate-compose')).toHaveCount(1);
     expect(await page.evaluate(() => document.getElementById('spotslate-compose').shadowRoot)).toBeNull();
+  });
+
+  test('runs the dual subtitles only on YouTube', async ({ page, server }) => {
+    await page.goto(`${server.url}/youtube-captions.html`); // 127.0.0.1: allowed in the test copy, not in the extension
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.spotslate-sub')).toHaveCount(0);
+    expect(server.requests).toHaveLength(0);
   });
 });
