@@ -1,4 +1,4 @@
-// YouTube captions. Two things:
+// YouTube captions. Three things:
 //
 // 1. markCaptionBlock: a caption cue is `.captions-text` (its visual lines inside), in the player's
 //    `.ytp-caption-window-container`. Marking the cue as one translatable block lets Alt over a caption translate the
@@ -19,6 +19,14 @@
 //    just ahead of the playhead are translated into the cache in advance, so the display (driven by the native caption,
 //    to stay aligned with it) finds them ready and there is no lag. Only the lines of the video being watched are sent,
 //    and only while captions show.
+//
+// 3. Selectable captions, while createCaptions runs: a word in a caption (or in our translation line) can be selected,
+//    to translate it with Alt or save it with Alt+A like on any page. YouTube makes its captions unselectable, and a
+//    press on them drags the caption window, a click toggles play, a double click fullscreen; for a moment as the
+//    controls come up (`ytp-autohide-active`) they even let the mouse through to the video. So the captions are made
+//    selectable and always under the mouse, and a press on their text is kept from the page's handlers (nothing is
+//    prevented, so the browser still selects). The press pauses the video, since YouTube replaces the caption every cue
+//    and the selection would go with it; the user plays it again as usual.
 (() => {
   /** @type {SpotSlate['markCaptionBlock']} */
   function markCaptionBlock(element) {
@@ -62,6 +70,10 @@
   const LOOKAHEAD_S = 15; // translate cues this far ahead of the playhead, so the translation is ready before the line
   const WARM_MAX = 2; // cues warmed per tick, so the look-ahead fills gradually instead of in one burst of requests
   const WARM_EVERY_MS = 1000; // between warming ticks
+  const CAPTION_TEXT = '.ytp-caption-window-container .captions-text';
+  // The events of a press, kept from the page while it is on caption text; the first three can come on their own.
+  const FOLLOW_UPS = ['click', 'dblclick', 'contextmenu'];
+  const PRESS_EVENTS = [...FOLLOW_UPS, 'pointerdown', 'mousedown', 'pointerup', 'mouseup'];
 
   const CAPTIONS_CSS = `
     .${SUB_CLASS} {
@@ -73,7 +85,9 @@
     .${SUB_CLASS} span {
       display: inline-block; padding: 0 0.5em; border-radius: 2px; font-size: 0.88em;
       background: rgba(8, 8, 8, 0.8); color: #7ad1ff; opacity: 0.95;
+      pointer-events: auto; user-select: text; cursor: text;
     }
+    ${CAPTION_TEXT}, ${CAPTION_TEXT} * { user-select: text !important; cursor: text !important; pointer-events: auto !important; }
     .${SUB_CLASS} .${WAIT_CLASS} { letter-spacing: 0.15em; animation: spotslate-sub-pulse 1.1s ease-in-out infinite; }
     @keyframes spotslate-sub-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.95; } }
     @media (prefers-reduced-motion: reduce) {
@@ -90,7 +104,9 @@
     let onCue = () => {};
     let targetLang = 'en';
     let observer = null;
-    let styled = false;
+    /** @type {HTMLStyleElement | null} */
+    let style = null;
+    let pressed = false; // the mouse went down on caption text, so the rest of the press is kept from the page too
     let running = false;
     let timer = 0;
     let raf = 0;
@@ -121,12 +137,29 @@
     };
 
     function injectStyle() {
-      if (styled) return;
-      styled = true;
-      const style = document.createElement('style');
+      if (style) return;
+      style = document.createElement('style');
       style.dataset.spotslate = 'captions';
       style.textContent = CAPTIONS_CSS;
       document.head?.append(style);
+    }
+
+    const onCaptionText = (target) => target instanceof Element && Boolean(target.closest(`${CAPTION_TEXT}, .${SUB_CLASS} span`));
+
+    // A press on caption text, and everything it brings (the release, the click, a double click, the context menu,
+    // wherever they land, so a selection dragged out over the video does not toggle play), never reaches YouTube's
+    // handlers. Only their propagation stops, so the browser still selects and still shows its own menu, to copy.
+    function keepPressFromPlayer(event) {
+      if (!event.isTrusted) return;
+      if (event.type === 'pointerdown') pressed = onCaptionText(event.target);
+      if (!pressed && !(FOLLOW_UPS.includes(event.type) && onCaptionText(event.target))) return;
+      event.stopPropagation();
+      if (event.type === 'pointerdown' && event.button === 0) {
+        markCaptionBlock(event.target); // the cue is one block, so a selected word's language is told from its line
+        const video = document.querySelector('#movie_player video');
+        if (video instanceof HTMLMediaElement && !video.paused) video.pause();
+      }
+      if (event.type === 'mouseup') setTimeout(() => (pressed = false)); // after the click and double click it brings
     }
 
     // Our one overlay, kept inside the current player (YouTube rebuilds the player between videos, so re-adopt it).
@@ -376,6 +409,7 @@
         }
         if (!observer) {
           injectStyle();
+          for (const type of PRESS_EVENTS) addEventListener(type, keepPressFromPlayer, true);
           observer = new MutationObserver(() => {
             place(); // keep glued to the native caption as it reflows, before the (debounced) translation catches up
             startTracking();
@@ -391,6 +425,11 @@
         running = false;
         observer?.disconnect();
         observer = null;
+        // Selectable captions without the press kept from the page would drag the caption window while selecting.
+        for (const type of PRESS_EVENTS) removeEventListener(type, keepPressFromPlayer, true);
+        style?.remove();
+        style = null;
+        pressed = false;
         if (onTimedText) {
           window.removeEventListener('message', onTimedText);
           onTimedText = null;

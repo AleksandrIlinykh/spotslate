@@ -147,3 +147,82 @@ test('dual subtitles follow the caption: a new cue gets its own translation, wit
   await expect(page.locator('.spotslate-sub')).toHaveText('[RU] a brand new line');
   await expect(page.locator('.spotslate-sub')).toHaveCount(1);
 });
+
+// The player fixture plays a video and reacts to the mouse as YouTube does, counting it: a press on the caption drags
+// it, a click toggles play, a double click fullscreen, a right click opens the player's menu.
+async function openPlayer(page, server) {
+  await page.goto(`${server.url}/youtube-player.html`);
+  await expect.poll(() => page.evaluate(() => document.querySelector('video').paused)).toBe(false);
+}
+const playerSaw = (page) => page.evaluate(() => ({ ...window.seen, paused: document.querySelector('video').paused }));
+const selected = (page) => page.evaluate(() => getSelection().toString().trim());
+
+// The middle of `word` in the text of `selector`, to point the mouse at it.
+const wordAt = (page, selector, word) =>
+  page.locator(selector).evaluate((element, text) => {
+    const node = element.firstChild;
+    const range = document.createRange();
+    range.setStart(node, node.textContent.indexOf(text));
+    range.setEnd(node, node.textContent.indexOf(text) + text.length);
+    const rect = range.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  }, word);
+
+const dblclickWord = async (page, selector, word) => {
+  const { x, y } = await wordAt(page, selector, word);
+  await page.mouse.dblclick(x, y);
+};
+
+test('a word in a YouTube caption can be selected: the press pauses the video, and the player neither drags the caption nor toggles play or fullscreen', async ({ page, server }) => {
+  await openPlayer(page, server);
+  await dblclickWord(page, '#seg2', 'extraordinary');
+  expect(await selected(page)).toBe('extraordinary');
+  expect(await playerSaw(page)).toEqual({ drags: 0, toggles: 0, fullscreens: 0, menus: 0, paused: true });
+});
+
+test('a press that starts on a caption and is let go over the video does not toggle play, and a later click on the video still does', async ({ page, server }) => {
+  await openPlayer(page, server);
+  const start = await wordAt(page, '#seg1', 'What');
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 100, start.y - 150, { steps: 5 }); // up over the video
+  await page.mouse.up(); // the click lands on the player, around both
+  expect(await playerSaw(page)).toEqual({ drags: 0, toggles: 0, fullscreens: 0, menus: 0, paused: true });
+  await page.mouse.click(start.x + 100, start.y - 150); // a plain click on the video is the player's again
+  expect(await playerSaw(page)).toEqual({ drags: 0, toggles: 1, fullscreens: 0, menus: 0, paused: false });
+});
+
+test('a word selected in a YouTube caption goes to the vocabulary with Alt+A', async ({ page, server, serviceWorker }) => {
+  await openPlayer(page, server);
+  await dblclickWord(page, '#seg2', 'extraordinary');
+  await page.keyboard.press('Alt+a');
+  await expect(page.locator('#spotslate-toast')).toContainText('extraordinary');
+  await expect
+    .poll(() => serviceWorker.evaluate(() => chrome.storage.local.get('vocabulary').then((o) => (o.vocabulary?.en ?? []).map((e) => e.word))))
+    .toContain('extraordinary');
+});
+
+test('Alt over a word selected in a YouTube caption translates the word, not the line', async ({ page, server }) => {
+  await openPlayer(page, server);
+  await dblclickWord(page, '#seg2', 'extraordinary');
+  await page.keyboard.down('Alt');
+  await expect(popupText(page)).toContainText('[RU] extraordinary');
+  await expect(popupText(page)).not.toContainText('talent');
+  await page.keyboard.up('Alt');
+});
+
+test('the translation line over a YouTube caption can be selected too, without toggling play', async ({ page, server }) => {
+  await openPlayer(page, server);
+  const line = page.locator('.spotslate-sub span');
+  await expect(line).toContainText('[RU] What you have there is a person');
+  await dblclickWord(page, '.spotslate-sub span', 'person');
+  expect(await selected(page)).toBe('person');
+  expect(await page.evaluate(() => Boolean(getSelection().anchorNode?.parentElement?.closest('.spotslate-sub')))).toBe(true);
+  expect(await playerSaw(page)).toEqual({ drags: 0, toggles: 0, fullscreens: 0, menus: 0, paused: true });
+});
+
+test('a right click on a YouTube caption opens the browser menu (to copy), not the player menu, and does not pause', async ({ page, server }) => {
+  await openPlayer(page, server);
+  await page.locator('#seg2').click({ button: 'right' });
+  expect(await playerSaw(page)).toEqual({ drags: 0, toggles: 0, fullscreens: 0, menus: 0, paused: false });
+});
