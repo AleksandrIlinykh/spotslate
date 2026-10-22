@@ -193,8 +193,10 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
     return true;
   }
   if (message?.type === 'vocabulary') {
-    loadVocabulary().then(sendResponse);
-    return true;
+    // Only SpotSlate's own pages (the vocabulary view) read the list; a page gets nothing but its own saved word back.
+    const own = sender.url?.startsWith(chrome.runtime.getURL(''));
+    if (own) loadVocabulary().then(sendResponse);
+    return Boolean(own);
   }
   if (message?.type === 'remove-word') {
     // Only SpotSlate's own pages (the vocabulary view) delete a word.

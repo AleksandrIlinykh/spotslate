@@ -3,6 +3,7 @@
     elementAt,
     inspectBlock,
     markCaptionBlock,
+    CAPTION_HOSTS,
     isOverText,
     writableField,
     selectionAt,
@@ -415,10 +416,11 @@
     }
   }
 
-  // Dual subtitles run on a video page with a player, while the site is on. The user's own CC button turns the captions
-  // on and off; with none showing there is nothing to translate.
+  // Dual subtitles run on YouTube (CAPTION_HOSTS: no other page may plant a player and have its text translated with
+  // no gesture) on a video page with a player, while the site is on. The user's own CC button turns the captions on
+  // and off; with none showing there is nothing to translate.
   function applyCaptions() {
-    if (settingsKnown && !siteMode.off && document.querySelector('#movie_player')) {
+    if (settingsKnown && !siteMode.off && CAPTION_HOSTS.includes(location.hostname) && document.querySelector('#movie_player')) {
       const id = new URL(location.href).searchParams.get('v') ?? '';
       captions.start({ translate: translateLine, targetLang, onCue: onCaptionCue, videoId: id });
     } else {
@@ -789,7 +791,7 @@
         trigger();
         return;
       }
-      if (popup.isOpen() && !popup.isOwn(event.target)) closePopup(); // pinned or not
+      if (popup.isOpen() && event.isTrusted && !popup.isOwn(event.target)) closePopup(); // pinned or not
       // A click elsewhere on the page puts the compose window away; SpotSlate's popup is part of the writing.
       if (composeWindow.isOpen() && event.isTrusted && !composeWindow.isOwn(event.target) && !popup.isOwn(event.target)) {
         composeWindow.leave();

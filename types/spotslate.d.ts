@@ -501,6 +501,8 @@ declare namespace SpotSlate {
 interface SpotSlate {
   /** content/config.js: 'closed' in the extension; the e2e tests run a copy with 'open'. */
   SHADOW_MODE: ShadowRootMode;
+  /** content/config.js: the hosts the dual subtitles run on (YouTube); the e2e tests' copy adds 127.0.0.1. */
+  CAPTION_HOSTS: string[];
 
   /** content/strings.js: what SpotSlate says, per language and key. */
   STRINGS: Record<SpotSlate.Lang, Record<string, string>>;

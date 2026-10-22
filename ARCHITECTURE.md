@@ -36,7 +36,7 @@ flowchart LR
 Three boundaries shape the code:
 
 - **The keys never reach a page.** Background calls `chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })`, so content scripts cannot read storage. A page gets only `PageSettings`: the language, the engine, the keys to press, the companion.
-- **A page cannot drive SpotSlate.** Every handler checks `event.isTrusted`, and the popup, the compose window and the companion live in closed shadow roots (`SHADOW_MODE` in `content/config.js`).
+- **A page cannot drive SpotSlate.** Every handler checks `event.isTrusted`, and the popup, the compose window and the companion live in closed shadow roots (`SHADOW_MODE` in `content/config.js`). The dual subtitles, the one thing that translates with no gesture, run on YouTube alone (`CAPTION_HOSTS` there): any other page with a player gets nothing translated.
 - **Background decides the site.** A content script never names its site; background takes it from the sender's tab (`siteOf`). Extension pages, which are on no site, name the active tab's.
 
 With Chrome's translator (the default provider, `engine: 'browser'`) the page translates by itself and background only remembers languages. With an AI provider (`engine: 'api'`) the page sends the text to background, which calls the API.
@@ -51,7 +51,7 @@ In the order Chrome loads them:
 
 | File | Adds | Role |
 |---|---|---|
-| `config.js` | `SHADOW_MODE` | closed shadow roots; the e2e tests run a copy with open ones |
+| `config.js` | `SHADOW_MODE`, `CAPTION_HOSTS` | closed shadow roots, and the hosts the dual subtitles run on (YouTube); the e2e tests run a copy with open roots and 127.0.0.1 allowed |
 | `strings.js` | `STRINGS`, `t`, `languageName` | everything SpotSlate says, in 13 languages |
 | `block.js` | `inspectBlock`, `elementAt`, `writableField`, ... | the paragraph under the mouse, the field to write in |
 | `selection.js` | `selectionAt`, `isShortPhrase`, `contextOf`, ... | the user's selection, a phrase and the words around it |
@@ -161,7 +161,7 @@ To background, with `chrome.runtime.sendMessage`:
 | `notes`, `clear-notes` | the context panel | the site's context; none |
 | `video-context` | `main.js` when captions run | a YouTube video's subtitle context `{ text }`, by id |
 | `add-word` | `main.js` on Alt+A | saved to the vocabulary by language; `{ added, word, lang }` |
-| `vocabulary`, `remove-word` | the vocabulary view | the whole vocabulary; the vocabulary after a delete |
+| `vocabulary`, `remove-word` | the vocabulary view (extension pages only; a content script gets no answer) | the whole vocabulary; the vocabulary after a delete |
 | `read-lang` | `main.js`, after Chrome's translator | none; counted for the site |
 | `report` | the popup's Report | none; opens a GitHub issue |
 | `open-options` | the popup's and the composer's gear | none |
