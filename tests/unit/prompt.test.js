@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_LEARNING_PROMPT, REFERENCE_REPLY, buildMessages } from '../../extension/lib/prompt.js';
+import { BREAKDOWN_FORMAT, DEFAULT_LEARNING_PROMPT, REFERENCE_REPLY, buildMessages } from '../../extension/lib/prompt.js';
 import { notesBlock } from '../../extension/lib/notes.js';
 
 test('buildMessages puts the language into the system prompt and the text into the user message', () => {
@@ -74,6 +74,52 @@ test('the learning breakdown is of the original word, with forms and examples ke
   const [sentence] = buildMessages('Ich warte.', 'Russian', { learning: true });
   assert.match(sentence.content, /analyze the original sentence.*not its translation/i);
   assert.match(sentence.content, /labels and explanations in Russian/i);
+});
+
+test('the learning breakdown is asked for in Markdown, after the lesson and the "---" line', () => {
+  const [dict] = buildMessages('Schritt', 'Russian', { mode: 'dictionary', learning: true });
+  const [sentence] = buildMessages('Ich warte.', 'Russian', { learning: true });
+  for (const { content } of [dict, sentence]) {
+    assert.ok(content.includes(BREAKDOWN_FORMAT));
+    assert.match(content, /Write the breakdown in Markdown/);
+    assert.match(content, /"### " heading/);
+    assert.match(content, /"- " bullets/);
+    assert.match(content, /table/);
+    assert.match(content, /no line of dashes/); // the "---" line is the separator, nothing else may be one
+    assert.doesNotMatch(content, /JSON/);
+    assert.ok(content.indexOf('a line containing exactly "---"') < content.indexOf(BREAKDOWN_FORMAT));
+    assert.ok(content.indexOf(DEFAULT_LEARNING_PROMPT) < content.indexOf(BREAKDOWN_FORMAT)); // the lesson says what, the format how
+  }
+});
+
+test('a custom learning instruction still picks what the Markdown breakdown holds', () => {
+  const [system] = buildMessages('Ich warte.', 'Russian', { learning: true, learningPrompt: 'the etymology and a mnemonic' });
+  assert.ok(system.content.indexOf('the etymology and a mnemonic') < system.content.indexOf(BREAKDOWN_FORMAT));
+});
+
+test('with the pretty layout off the learning prompts are the plain-text ones', () => {
+  const [dict] = buildMessages('Schritt', 'Russian', { mode: 'dictionary', learning: true, learningPretty: false });
+  const [sentence] = buildMessages('Ich warte.', 'Russian', { learning: true, learningPretty: false });
+  for (const { content } of [dict, sentence]) {
+    assert.doesNotMatch(content, /Markdown/);
+    assert.match(content, /Russian translation in parentheses after each example/);
+    assert.match(content, /a line containing exactly "---"/);
+    assert.ok(content.includes(DEFAULT_LEARNING_PROMPT));
+  }
+  assert.match(dict.content, /Reply in Russian, in plain text only: on the first line give the most common translation, and nothing else on that line/);
+  assert.deepEqual(buildMessages('x', 'German', { learning: true }), buildMessages('x', 'German', { learning: true, learningPretty: true }));
+});
+
+test('only the learning prompts ask for Markdown', () => {
+  for (const mode of ['text', 'dictionary']) {
+    assert.doesNotMatch(buildMessages('x', 'German', { mode })[0].content, /Markdown/);
+  }
+});
+
+test('a learning dictionary entry keeps its first line plain text', () => {
+  const [system] = buildMessages('déclenché', 'Russian', { mode: 'dictionary', learning: true });
+  assert.doesNotMatch(system.content, /in plain text only/);
+  assert.match(system.content, /on the first line give the most common translation, in plain text, and nothing else on that line/);
 });
 
 test('buildMessages uses a custom learning instruction in place of the default', () => {

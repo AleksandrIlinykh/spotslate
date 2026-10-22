@@ -58,6 +58,7 @@ function show(settings) {
   form.elements.companion.value = settings.companion;
   form.elements.learning.checked = settings.learning;
   form.elements.learningPrompt.value = settings.learningPrompt;
+  form.elements.learningPretty.checked = settings.learningPretty;
   form.elements.correctionPrompt.value = settings.correctionPrompt;
   showLearningFields();
   for (const [id, preset] of Object.entries(PROVIDERS)) {
@@ -413,6 +414,7 @@ form.addEventListener('submit', async (event) => {
     companion: form.elements.companion.value,
     learning: form.elements.learning.checked,
     learningPrompt: form.elements.learningPrompt.value,
+    learningPretty: form.elements.learningPretty.checked,
     correctionPrompt: form.elements.correctionPrompt.value,
   });
   await chrome.storage.local.set({ settings });

@@ -10,6 +10,7 @@ export const DEFAULTS = Object.freeze({
   companion: 'pup',
   learning: false,
   learningPrompt: DEFAULT_LEARNING_PROMPT,
+  learningPretty: true,
   correctionPrompt: DEFAULT_CORRECTION_PROMPT,
 });
 
@@ -81,6 +82,7 @@ export function withDefaults(stored, platform = currentPlatform(), uiLanguage = 
     companion: COMPANIONS.includes(stored?.companion) || stored?.companion === 'none' ? stored.companion : DEFAULTS.companion,
     learning: typeof stored?.learning === 'boolean' ? stored.learning : DEFAULTS.learning,
     learningPrompt: trimmed(stored?.learningPrompt).slice(0, MAX_LEARNING_PROMPT) || DEFAULTS.learningPrompt,
+    learningPretty: typeof stored?.learningPretty === 'boolean' ? stored.learningPretty : DEFAULTS.learningPretty,
     correctionPrompt: trimmed(stored?.correctionPrompt).slice(0, MAX_LEARNING_PROMPT) || DEFAULTS.correctionPrompt,
   };
 }

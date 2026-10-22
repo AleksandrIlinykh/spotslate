@@ -34,6 +34,7 @@
         "content/translator.js",
         "content/notes-panel.js",
         "content/lang-picker.js",
+        "content/markdown.js",
         "content/popup.js",
         "content/highlight.js",
         "content/toast.js",

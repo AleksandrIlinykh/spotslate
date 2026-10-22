@@ -71,9 +71,18 @@
     }
     .head { font-size: 15px; font-weight: 600; line-height: 1.4; }
     .head.is-word { font-size: 22px; font-weight: 700; line-height: 1.25; }
-    .rest { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8dee4; font-size: 13px; opacity: 0.85; }
+    .rest { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8dee4; font-size: 13px; opacity: 0.85; white-space: normal; }
     .rest[hidden] { display: none; }
     .rest strong { font-weight: 700; }
+    .rest > :first-child { margin-top: 0; }
+    .bd-label { margin: 8px 0 3px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; }
+    .bd-text { margin: 3px 0; white-space: pre-line; }
+    .bd-list { margin: 2px 0; padding-left: 16px; }
+    .bd-list li { margin: 2px 0; }
+    .bd-scroll { margin: 2px 0; overflow-x: auto; }
+    .bd-table { border-collapse: collapse; font-size: 12px; }
+    .bd-table th, .bd-table td { padding: 2px 14px 2px 0; text-align: left; white-space: nowrap; }
+    .bd-table th { border-bottom: 1px solid #d8dee4; font-weight: 600; opacity: 0.75; }
     .popup.is-loading .text { animation: pulse 1s ease-in-out infinite; }
     .popup.is-error .text { color: #cf222e; }
     .popup.is-notice .text { opacity: 0.75; }
@@ -130,6 +139,7 @@
       .bar, .foot { border-color: #30363d; background: #0d1117; }
       .popup.is-error .text { color: #ff7b72; }
       .rest { border-color: #30363d; }
+      .bd-table th { border-color: #30363d; }
     }
   `;
 
@@ -171,6 +181,46 @@
         return strong;
       }),
     );
+  }
+
+  // An element of `tag` with `className` and `text`, its **bold** runs in <strong>.
+  function richNode(tag, className, text) {
+    const element = document.createElement(tag);
+    element.className = className;
+    setRich(element, text);
+    return element;
+  }
+
+  // The nodes of a breakdown's blocks (see `parseMarkdown`): a heading as a small label, a list as bullets, a table in a
+  // box that scrolls sideways, text as a paragraph. Nodes, never markup: the text comes from the page's model.
+  function breakdownNodes(blocks) {
+    return blocks.map((block) => {
+      if (block.type === 'heading') return richNode('div', 'bd-label', block.text);
+      if (block.type === 'list') {
+        const list = document.createElement('ul');
+        list.className = 'bd-list';
+        for (const item of block.items) list.append(richNode('li', '', item));
+        return list;
+      }
+      if (block.type === 'table') {
+        const scroll = document.createElement('div');
+        scroll.className = 'bd-scroll';
+        const table = document.createElement('table');
+        table.className = 'bd-table';
+        if (block.columns.some(Boolean)) {
+          const row = table.createTHead().insertRow();
+          for (const column of block.columns) row.append(richNode('th', '', column));
+        }
+        const body = table.createTBody();
+        for (const cells of block.rows) {
+          const row = body.insertRow();
+          for (const cell of cells) row.append(richNode('td', '', cell));
+        }
+        scroll.append(table);
+        return scroll;
+      }
+      return richNode('p', 'bd-text', block.text);
+    });
   }
 
   // The six dots that say "drag me", for the title rows of the windows that can be moved (dimmed by `.grip` rules).
@@ -312,8 +362,9 @@
     // action: 'settings', 'retry' or 'download' adds that button under an error.
     // A `notice` says something about the text instead of translating it: nothing to copy or report.
     // `lesson` ('word' or 'sentence') shows the text as a learning answer: the translation large and bold, the breakdown
-    // under a line (see `splitLesson`). Without it the text is one plain block.
-    function render(text, { loading = false, error = false, notice = false, action = null, lesson = null } = {}) {
+    // under a line (see `splitLesson`) and drawn from its Markdown (see `parseMarkdown`). `final` says the answer is whole,
+    // so a table that never got its separator row shows as text. Without `lesson` the text is one plain block.
+    function render(text, { loading = false, error = false, notice = false, action = null, lesson = null, final = false } = {}) {
       raw = text;
       copyable = text;
       if (lesson) {
@@ -321,8 +372,9 @@
         headEl.className = `head is-${lesson}`;
         const plainHead = withoutBold(head); // the head is bold as a whole
         headEl.textContent = plainHead;
-        setRich(restEl, rest);
-        restEl.hidden = rest === '';
+        // The breakdown is Markdown drawn as headings, lists and tables; a plain-text answer comes out as paragraphs.
+        restEl.replaceChildren(...breakdownNodes(globalThis.spotslate.parseMarkdown(rest, final)));
+        restEl.hidden = restEl.childNodes.length === 0;
         textEl.replaceChildren(headEl, restEl);
         copyable = plainHead;
       } else {
@@ -528,8 +580,8 @@
         render(text, { loading: true });
         schedulePosition();
       },
-      setText(text, { lesson = null } = {}) {
-        render(text, { lesson });
+      setText(text, { lesson = null, final = false } = {}) {
+        render(text, { lesson, final });
         schedulePosition();
       },
       setNotice(text) {
