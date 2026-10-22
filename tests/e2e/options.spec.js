@@ -135,6 +135,7 @@ test('each provider keeps its own key, model and URL while switching, and all ar
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    learningPretty: true,
     correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
@@ -158,6 +159,7 @@ test('saves trimmed values, and a blank model or URL means the default', async (
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    learningPretty: true,
     correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
@@ -183,6 +185,19 @@ test('saves the learning mode, off by default and kept when turned on', async ({
   await save(page);
   await expect(page.locator('#status')).toHaveText('Saved');
   expect((await stored(serviceWorker)).learning).toBe(true);
+});
+
+test('"Make the answer easy to scan" is on by default and the choice is saved', async ({ page, extensionId, serviceWorker }) => {
+  await page.goto(optionsUrl(extensionId));
+  await page.locator('#learning').check();
+  await expect(page.locator('#learningPretty')).toBeChecked();
+  await save(page);
+  expect((await stored(serviceWorker)).learningPretty).toBe(true);
+  await page.locator('#learningPretty').uncheck();
+  await save(page);
+  expect((await stored(serviceWorker)).learningPretty).toBe(false);
+  await page.reload();
+  await expect(page.locator('#learningPretty')).not.toBeChecked();
 });
 
 test('a custom learning instruction is saved, and a blank one goes back to the default', async ({ page, extensionId, serviceWorker }) => {

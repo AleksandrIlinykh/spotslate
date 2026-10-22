@@ -260,7 +260,7 @@
   function load() {
     const cached = cache.get(cacheKey(shown));
     if (cached === undefined) translate(shown);
-    else popup.setText(cached, { lesson: lessonOf(shown) });
+    else popup.setText(cached, { lesson: lessonOf(shown), final: true });
   }
 
   // A bad translation: GitHub gets only the setup, from background; the text and its translation go to the clipboard,
@@ -307,6 +307,7 @@
         result += message.text;
         popup.setText(result, { lesson: lessonOf(request) });
       } else if (message.type === 'done') {
+        popup.setText(result, { lesson: lessonOf(request), final: true }); // the answer is whole: a table without its separator shows as text
         remember(cache, cacheKey(request), result);
         disconnect();
       } else if (message.type === 'error') {

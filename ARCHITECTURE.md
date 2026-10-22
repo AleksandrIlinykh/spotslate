@@ -59,7 +59,8 @@ In the order Chrome loads them:
 | `translator.js` | `translateInBrowser`, `prepareInBrowser`, `describeProblem`, ... | Chrome's Translator: model downloads, problems in words |
 | `notes-panel.js` | `createNotesPanel` | the site context panel |
 | `lang-picker.js` | `createLanguagePicker` | the language button and list of every title row |
-| `popup.js` | `createPopup`, `createGrip` | the translation popup: position, pinning, dragging, resizing |
+| `markdown.js` | `parseMarkdown` | the learning mode's Markdown breakdown, cut into blocks even half-streamed |
+| `popup.js` | `createPopup`, `createGrip`, `splitLesson`, `splitBold` | the translation popup: position, pinning, dragging, resizing |
 | `highlight.js` | `createHighlight` | the dashed outline and the line to the popup |
 | `correction.js` | `parseCorrection`, `diffWords` | reading a checked text and what changed |
 | `composer.js` | `createComposer` | the compose window's content, also in the toolbar window |
@@ -209,6 +210,7 @@ Closing a port cancels the request: background aborts the `fetch`.
 | when a translation starts, closes, or is put away | `trigger`, `show`, `closePopup`, `checkLeave` and the handlers at the end of `main.js` |
 | the popup's place, size, pinning, dragging | `content/popup.js` |
 | the prompts | `lib/prompt.js`, `lib/notes.js`, `lib/compose.js` |
+| how the learning breakdown (Markdown) is read and drawn | `content/markdown.js`, `breakdownNodes` in `content/popup.js`, `BREAKDOWN_FORMAT` in `lib/prompt.js` |
 | a provider | `PROVIDERS` in `lib/providers.js`, `host_permissions` in `manifest.json` |
 | what SpotSlate says on pages | `content/strings.js`; `tests/unit/strings.test.js` checks every language has every text |
 | error texts and codes | `lib/errors.js` |

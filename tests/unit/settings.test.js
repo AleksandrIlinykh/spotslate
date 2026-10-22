@@ -14,10 +14,11 @@ test('withDefaults returns the free built-in translator, the browser language, n
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    learningPretty: true,
     correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
   assert.equal(withDefaults(undefined, 'win', 'de-AT').targetLang, 'de');
-  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false, learningPrompt: DEFAULT_LEARNING_PROMPT, correctionPrompt: DEFAULT_CORRECTION_PROMPT });
+  assert.deepEqual(DEFAULTS, { provider: 'chrome', companion: 'pup', learning: false, learningPrompt: DEFAULT_LEARNING_PROMPT, learningPretty: true, correctionPrompt: DEFAULT_CORRECTION_PROMPT });
 });
 
 test('withDefaults keeps the companion chosen, or none, and brings Spot back for anything else', () => {
@@ -40,6 +41,8 @@ test('withDefaults fills the learning instruction with the default and trims a c
 
 test('withDefaults caps a very long learning instruction', () => {
   assert.equal(withDefaults({ learningPrompt: 'x'.repeat(2000) }).learningPrompt.length, 1000);
+  assert.equal(withDefaults({ learningPretty: false }).learningPretty, false);
+  assert.equal(withDefaults({ learningPretty: 'no' }).learningPretty, true); // anything but a boolean is the default
 });
 
 test('withDefaults fills the correction instruction with the default and trims a custom one', () => {
@@ -81,6 +84,7 @@ test('withDefaults keeps the chosen provider and every provider entry, trimmed',
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    learningPretty: true,
     correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
@@ -95,6 +99,7 @@ test('withDefaults drops unknown providers, unknown fields and non-string values
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    learningPretty: true,
     correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });
@@ -113,6 +118,7 @@ test('settings saved before providers existed become the DeepSeek entry', () => 
     companion: 'pup',
     learning: false,
     learningPrompt: DEFAULT_LEARNING_PROMPT,
+    learningPretty: true,
     correctionPrompt: DEFAULT_CORRECTION_PROMPT,
   });
 });

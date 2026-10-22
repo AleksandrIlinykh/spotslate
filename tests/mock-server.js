@@ -25,6 +25,7 @@ const STREAM_END = { openai: 'data: [DONE]\n\n', anthropic: 'event: message_stop
 // Fake OpenAI-compatible API (POST /chat/completions, GET /models), fake Anthropic Messages API (POST /messages)
 // and the fixture pages and PDFs, on a random local port.
 // The API key picks the behaviour: bad → 401, broke → 402, empty → no text,
+// prose → a learning breakdown in plain text even when the prompt asks for Markdown (a model that ignored the format),
 // slow → one chunk per second, late → the first chunk after 1.5 seconds, split → a four-byte emoji cut between writes,
 // flaky → 500 on the first request and normal answers after it,
 // strict → 400 for a request that carries a reasoning switch,
@@ -166,12 +167,13 @@ async function completions(req, res, { requests, notesRequests }, state, api) {
   // The learning prompts (lib/prompt.js) ask for more: a sentence gets a breakdown after a '---' line, a dictionary
   // word too, with its forms and an example. The key picks nothing here; the system prompt does.
   const system = String(record.body.system ?? record.body.messages[0].content);
+  const plain = key === 'prose' || !/in Markdown/.test(system); // the prompt asks for Markdown only with the pretty layout on
   if (/Rewrite the user's text/.test(system)) {
     translation = `Reworded: ${text}`; // a rephrase of a finished translation (lib/compose.js)
   } else if (/bilingual dictionary/.test(system) && !/Add nothing else\./.test(system)) {
-    translation += `\n---\nForms: ${text}, ${text}s\nExample: ${text} here`;
+    translation += `\n---\n${plain ? `Forms: ${text}, ${text}s\nExample: ${text} here` : wordBreakdown(text)}`;
   } else if (!isCorrection(record.body) && /add a line containing exactly "---"/.test(system)) {
-    translation += `\n---\nParts: subject, verb`;
+    translation += `\n---\n${plain ? 'Parts: subject, verb' : sentenceBreakdown}`;
   }
   const size = Math.ceil(translation.length / 3);
   const pause = key === 'slow' ? 1000 : 30;
@@ -183,6 +185,32 @@ async function completions(req, res, { requests, notesRequests }, state, api) {
   }
   finish(STREAM_END[api]);
 }
+
+// The learning breakdowns (lib/prompt.js asks for Markdown): a word with a bold line, a list, a table, a line of short words
+// and an example; a sentence with a list. The key `prose` answers in plain text instead, as a model that ignored the format
+// would.
+function wordBreakdown(text) {
+  return [
+    `**${text}** · noun, mock`,
+    '',
+    '### Forms',
+    `- plural: ${text}s`,
+    '',
+    '### Cases',
+    '| | sg | pl |',
+    '|---|---|---|',
+    `| nom | ${text} | ${text}s |`,
+    `| gen | ${text}'s | ${text}s' |`,
+    '',
+    '### Related',
+    `${text}ly · un${text}`,
+    '',
+    '### Example',
+    `- A **${text}** here. ([RU] ${text} here)`,
+  ].join('\n');
+}
+
+const sentenceBreakdown = ['### Parts', '- subject', '- verb'].join('\n');
 
 function isCorrection(body) {
   return String(body.system ?? body.messages[0].content).startsWith('The user is learning');

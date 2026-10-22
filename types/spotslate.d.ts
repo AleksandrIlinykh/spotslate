@@ -18,6 +18,15 @@ declare namespace SpotSlate {
   type Lang = string;
   /** A site: the host with port of a page, such as 'en.wikipedia.org' or 'localhost:8080'. */
   type Site = string;
+
+  // The learning breakdown (content/markdown.js)
+
+  /** A block of a breakdown's Markdown: a heading, a bullet list, a table, or text. */
+  type MarkdownBlock =
+    | { type: 'heading'; text: string }
+    | { type: 'list'; items: string[] }
+    | { type: 'table'; columns: string[]; rows: string[][] }
+    | { type: 'text'; text: string };
   /** Who translates: an AI provider called by background, or Chrome's translator on the page itself. */
   type Engine = 'api' | 'browser';
   /** A companion in the settings: a key of `heroes`, or none. */
@@ -60,6 +69,8 @@ declare namespace SpotSlate {
     learning: boolean;
     /** What the learning breakdown should hold: the user's own instruction, or the default. */
     learningPrompt: string;
+    /** The breakdown in Markdown drawn as headings, lists and tables; off, it is plain text. */
+    learningPretty: boolean;
     /** What each correction note should hold in the learning mode: the user's own instruction, or the default. */
     correctionPrompt: string;
   }
@@ -138,6 +149,7 @@ declare namespace SpotSlate {
       companion: RadioNodeList;
       learning: HTMLInputElement;
       learningPrompt: HTMLTextAreaElement;
+      learningPretty: HTMLInputElement;
       correctionPrompt: HTMLTextAreaElement;
     };
   }
@@ -237,6 +249,8 @@ declare namespace SpotSlate {
     learning: boolean;
     /** What the breakdown holds; set by background from the settings, never by the page. */
     learningPrompt?: string;
+    /** Set by background from the settings: whether the breakdown is asked for in Markdown. */
+    learningPretty?: boolean;
     /** The text's language, if the detector looked at it. */
     lang: Lang | null;
   }
@@ -309,8 +323,8 @@ declare namespace SpotSlate {
     open(target: Element | Range): void;
     /** `text` says what is going on, such as a download; the default is an ellipsis. */
     setLoading(text?: string): void;
-    /** With `lesson`, the text is a learning answer: the translation large and bold, the breakdown under a line. */
-    setText(text: string, options?: { lesson?: 'word' | 'sentence' | null }): void;
+    /** With `lesson`, the text is a learning answer: the translation large and bold, the breakdown under a line. `final`: the answer is whole. */
+    setText(text: string, options?: { lesson?: 'word' | 'sentence' | null; final?: boolean }): void;
     /** A line instead of a translation, such as "already in your language". */
     setNotice(text: string): void;
     setError(message: string, options?: { action?: ProblemText['action'] }): void;
@@ -525,6 +539,9 @@ interface SpotSlate {
   /** content/popup.js: a learning answer cut at its first "---" line into the translation and the breakdown. */
   splitLesson(text: string): { head: string; rest: string };
   splitBold(text: string): { text: string; bold?: boolean }[];
+
+  /** content/markdown.js: the Markdown of a learning breakdown cut into blocks; `final`: the answer is whole, so a table that never got its separator row shows as text. */
+  parseMarkdown(text: string, final?: boolean): SpotSlate.MarkdownBlock[];
 
   /** content/selection.js: the user's selection under a point, on the page or in the focused field. */
   selectionAt(x: number, y: number): SpotSlate.Picked | null;

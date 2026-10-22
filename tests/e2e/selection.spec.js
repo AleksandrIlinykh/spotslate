@@ -48,8 +48,10 @@ test('in learning mode a selected sentence gets a grammar breakdown after the tr
   await page.goto(`${server.url}/page.html`);
   await altOver(page, await select(page, '#p1', 0, 44));
   await expect(popupText(page).locator('.head')).toHaveText('[RU] The quick brown fox jumps over the lazy dog.');
-  await expect(popupText(page).locator('.rest')).toHaveText('Parts: subject, verb');
+  await expect(popupText(page).locator('.rest .bd-label')).toHaveText('Parts');
+  await expect(popupText(page).locator('.rest .bd-list li')).toHaveText(['subject', 'verb']);
   await expect(popupText(page)).not.toContainText('---'); // the separator is a line, not text
+  await expect(popupText(page)).not.toContainText('###'); // the breakdown is drawn, never shown as Markdown
   const system = server.requests[0].body.messages[0].content;
   expect(system).toContain('breakdown');
   expect(system).toMatch(/analyze the original sentence, not its translation/);
@@ -61,7 +63,7 @@ test('a custom learning instruction is used in the request, and the breakdown st
   await page.goto(`${server.url}/page.html`);
   await altOver(page, await select(page, '#p1', 0, 44));
   await expect(popupText(page).locator('.head')).toHaveText('[RU] The quick brown fox jumps over the lazy dog.');
-  await expect(popupText(page).locator('.rest')).toHaveText('Parts: subject, verb');
+  await expect(popupText(page).locator('.rest .bd-list li')).toHaveText(['subject', 'verb']);
   const [{ body }] = server.requests;
   expect(body.messages[0].content).toContain('only the gender and the plural');
   expect(body.messages[0].content).not.toContain('part of speech and base form'); // the default is replaced
@@ -72,8 +74,8 @@ test('in learning mode a selected word gets its forms and an example', async ({ 
   await page.goto(`${server.url}/page.html`);
   await altOver(page, await select(page, '#p1', 4, 9));
   await expect(popupText(page).locator('.head')).toHaveText('[RU] quick');
-  await expect(popupText(page).locator('.rest')).toContainText('Forms: quick');
-  await expect(popupText(page).locator('.rest')).toContainText('Example: quick here');
+  await expect(popupText(page).locator('.rest .bd-list li').first()).toHaveText('plural: quicks');
+  await expect(popupText(page).locator('.rest .bd-list li').last()).toContainText('A quick here.');
   await expect(popupText(page)).not.toContainText('---');
   const system = server.requests[0].body.messages[0].content;
   expect(system).toContain('bilingual dictionary');
@@ -87,7 +89,7 @@ test('in learning mode the translation of a word is larger and bolder than its b
   await altOver(page, await select(page, '#p1', 4, 9));
   const head = popupText(page).locator('.head');
   const rest = popupText(page).locator('.rest');
-  await expect(rest).toContainText('Forms: quick');
+  await expect(rest).toContainText('plural: quicks');
   const look = (locator) => locator.evaluate((el) => ({ size: parseFloat(getComputedStyle(el).fontSize), weight: Number(getComputedStyle(el).fontWeight) }));
   const [headLook, restLook] = [await look(head), await look(rest)];
   expect(headLook.size).toBeGreaterThan(restLook.size * 1.5);
@@ -96,6 +98,46 @@ test('in learning mode the translation of a word is larger and bolder than its b
   await popupRoot(page).locator('.popup').hover();
   await popupRoot(page).locator('.copy').click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('[RU] quick');
+});
+
+test('in learning mode a breakdown is drawn from its Markdown: a bold line, labels, bullets, a table and an example', async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 4, 9));
+  const rest = popupText(page).locator('.rest');
+  await expect(rest.locator('.bd-text').first()).toHaveText('quick · noun, mock');
+  await expect(rest.locator('.bd-text strong').first()).toHaveText('quick');
+  await expect(rest.locator('.bd-label')).toHaveText(['Forms', 'Cases', 'Related', 'Example']);
+  await expect(rest.locator('.bd-table th')).toHaveText(['', 'sg', 'pl']);
+  await expect(rest.locator('.bd-table tbody tr')).toHaveCount(2);
+  await expect(rest.locator('.bd-table tbody tr').first().locator('td')).toHaveText(['nom', 'quick', 'quicks']);
+  await expect(rest.locator('.bd-text').nth(1)).toHaveText('quickly · unquick');
+  await expect(rest.locator('.bd-list li strong')).toHaveText('quick'); // **bold** inside an item
+  await expect(rest).not.toContainText('**');
+  await expect(rest).not.toContainText('|');
+  await expect(rest).not.toContainText('###');
+});
+
+test('in learning mode a breakdown the model wrote as plain text instead of Markdown still shows', async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true, apiKey: 'prose' });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 4, 9));
+  await expect(popupText(page).locator('.head')).toHaveText('[RU] quick');
+  await expect(popupText(page).locator('.rest')).toContainText('Forms: quick');
+  await expect(popupText(page).locator('.rest .bd-label')).toHaveCount(0);
+});
+
+test('with the pretty layout off the breakdown is asked for and shown as plain text', async ({ page, server, setSettings }) => {
+  await setSettings({ learning: true, learningPretty: false });
+  await page.goto(`${server.url}/page.html`);
+  await altOver(page, await select(page, '#p1', 4, 9));
+  await expect(popupText(page).locator('.head')).toHaveText('[RU] quick');
+  await expect(popupText(page).locator('.rest')).toContainText('Forms: quick');
+  await expect(popupText(page).locator('.rest .bd-label')).toHaveCount(0);
+  const system = server.requests[0].body.messages[0].content;
+  expect(system).not.toContain('Markdown');
+  expect(system).toContain('in plain text only');
+  expect(system).toContain('translation in parentheses after each example');
 });
 
 test('a plain translation is one block without the lesson layout', async ({ page }) => {

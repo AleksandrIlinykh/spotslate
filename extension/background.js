@@ -566,7 +566,7 @@ async function translate(request, site, signal, send, onTranslated = () => {}) {
   // The setting is authoritative: a page cannot ask for a breakdown the user turned off, and the instruction that
   // shapes it comes from the settings, never from the page.
   const learning = Boolean(request.learning) && settings.learning;
-  request = { ...request, learning, learningPrompt: learning ? settings.learningPrompt : '' };
+  request = { ...request, learning, learningPrompt: learning ? settings.learningPrompt : '', learningPretty: settings.learningPretty };
   const provider = activeProvider(settings);
   if (provider.api === 'browser') {
     // The page did not hear about the switch to the free translator yet; the message is on its way.
@@ -646,10 +646,10 @@ async function stream(provider, messages, signal, send, lang) {
 
 // Translations are shared by all tabs for the browser session (chrome.storage.session). The notes are left out:
 // a text translated once is reused while they grow.
-async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, videoId = '', learning, learningPrompt = '' }) {
+async function cacheKey({ id, baseUrl, model }, targetLang, { mode, text, context, videoId = '', learning, learningPrompt = '', learningPretty = true }) {
   // The video id is part of the key: the same caption line in two videos uses each video's own context, so the two
   // translations must not share a cache entry.
-  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, videoId, learning, learningPrompt]));
+  const data = new TextEncoder().encode(JSON.stringify([id, baseUrl, model, targetLang, mode, text, context, videoId, learning, learningPrompt, learningPretty]));
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
   return CACHE_PREFIX + Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

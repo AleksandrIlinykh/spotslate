@@ -19,6 +19,17 @@ export const DEFAULT_LEARNING_PROMPT =
 // "...for each correction: {this}". The user can replace it in the settings.
 export const DEFAULT_CORRECTION_PROMPT = 'the change, then a short rule for it and one example';
 
+// How the breakdown is written when the user wants it easy to scan: a small subset of Markdown that SpotSlate draws
+// (content/markdown.js). Models write Markdown well and it still reads if it is not drawn; a list of short words goes on
+// one line because Markdown has no chips, and the "---" line is the one thing the breakdown must not use.
+export const BREAKDOWN_FORMAT =
+  'Write the breakdown in Markdown, so it can be scanned: start with one short line (for a word, its key form in **bold** ' +
+  'and then the word class and the dictionary form; for a sentence, leave this line out), then a "### " heading for each ' +
+  'section, under it "- " bullets, and a table ("| a | b |" rows, with a "|---|---|" row under the first) for a ' +
+  'conjugation or a declension. Put a short list of words, such as synonyms, on one line separated by " · ". Mark key ' +
+  'words with **bold**. Keep every section short. Use no other Markdown (no links, images, code, quotes or horizontal rules, ' +
+  'and no line of dashes).';
+
 export function referenceTurns(parts) {
   if (parts.length === 0) return [];
   return [
@@ -30,7 +41,7 @@ export function referenceTurns(parts) {
   ];
 }
 
-export function buildMessages(text, languageName, { mode = 'text', context = '', notes = '', learning = false, learningPrompt = '' } = {}) {
+export function buildMessages(text, languageName, { mode = 'text', context = '', notes = '', learning = false, learningPrompt = '', learningPretty = true } = {}) {
   const withContext = mode === 'dictionary' && Boolean(context);
   // The learning mode turns each entry into a short lesson. SpotSlate keeps the mechanics (the translation first, the
   // '---' line, the dictionary's first line); `lesson` is what the lesson holds, the user's own instruction or the
@@ -42,13 +53,16 @@ export function buildMessages(text, languageName, { mode = 'text', context = '',
   const keepOriginal =
     `Keep the forms and any example sentences in the original language, and add a ${languageName} translation in ` +
     `parentheses after each example; write your labels and explanations in ${languageName}.`;
+  // With the pretty layout on the breakdown is asked for as Markdown (BREAKDOWN_FORMAT); off, as plain text.
+  const pretty = learning && learningPretty;
+  const breakdown = `${lesson} ${keepOriginal}${pretty ? ` ${BREAKDOWN_FORMAT}` : ''}`;
   const dictionaryEntry =
     "You are a bilingual dictionary. The user's text is a word or a short phrase. " +
-    `Reply in ${languageName}, in plain text only: on the first line give ` +
+    `Reply in ${languageName}${pretty ? '' : ', in plain text only'}: on the first line give ` +
     (withContext ? 'the translation that fits the sentence it is from, given as reference' : 'the most common translation') +
     (learning
-      ? ', and nothing else on that line (no notes, no context, no brackets). Then add a line containing exactly "---" and ' +
-        `then analyze the original word (the one the user wrote), not its translation: ${lesson} ${keepOriginal}`
+      ? `${pretty ? ', in plain text' : ''}, and nothing else on that line (no notes, no context, no brackets). Then add a line containing exactly "---" and ` +
+        `then analyze the original word (the one the user wrote), not its translation: ${breakdown}`
       : '; then add up to three lines, one per sense, each as "part of speech: meanings", most common first. Add nothing else.');
   const translator =
     `You are a professional translator. Translate the user's text into ${languageName}. ` +
@@ -58,7 +72,7 @@ export function buildMessages(text, languageName, { mode = 'text', context = '',
     `If the text is already in ${languageName}, return it unchanged.` +
     (learning
       ? ' After the translation, only when the text is a single sentence, add a line containing exactly "---" and ' +
-        `then analyze the original sentence, not its translation: ${lesson} ${keepOriginal} ` +
+        `then analyze the original sentence, not its translation: ${breakdown} ` +
         'When the text is longer than one sentence, output only the translation.'
       : '');
   const instructions = mode === 'dictionary' ? dictionaryEntry : translator;
