@@ -42,7 +42,7 @@ What to fill in when submitting SpotSlate. The package is `dist/spotslate-<versi
 > - No account, no server, no analytics. Web pages cannot read your key or look into SpotSlate's windows.
 >
 > AND
-> - A little pixel companion dances next to the mouse while you hold Alt and sits on the translation when it is ready: Spot the shiba, Ink the black cat, Biscuit the corgi or Momo the monkey. Or no one, if you prefer.
+> - A little pixel companion dances next to the mouse while you hold Alt and sits on the translation when it is ready: Spot the shiba, Ink the black cat, Biscuit the corgi, Momo the monkey or Bobo the worried monkey. Or no one, if you prefer.
 > - SpotSlate speaks your language: its hints and buttons follow the language you translate into (13 languages).
 > - Keys can be changed in the settings; shortcuts that would type text or that Chrome needs are refused.
 >

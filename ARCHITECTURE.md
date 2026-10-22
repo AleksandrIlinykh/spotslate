@@ -64,7 +64,7 @@ In the order Chrome loads them:
 | `correction.js` | `parseCorrection`, `diffWords` | reading a checked text and what changed |
 | `composer.js` | `createComposer` | the compose window's content, also in the toolbar window |
 | `compose-window.js` | `createComposeWindow` | the compose window on a page: where it opens and closes |
-| `pixels.js`, `pup.js`, `cat.js`, `corgi.js` | `pixels`, `heroes` | the companions as pixel data |
+| `pixels.js`, `pup.js`, `cat.js`, `corgi.js`, `monkey.js` | `pixels`, `heroes` | the companions as pixel data |
 | `hero.js` | `createHero`, `drawHero` | the companion by the mouse and on the popup |
 | `main.js` | nothing | the page's state and every event handler; ties the rest together |
 
@@ -214,7 +214,7 @@ Closing a port cancels the request: background aborts the `fetch`.
 | error texts and codes | `lib/errors.js` |
 | the keys | `lib/keys.js`, `isWriteKey` and `readHeld` in `main.js`, the Keys block of `options.html` |
 | a site's mode | `lib/sites.js`, `setSiteMode` in `background.js`, `siteRow` in `compose-page.js` |
-| the companion | `content/hero.js`, its pixels in `pup.js`, `cat.js`, `corgi.js` |
+| the companion | `content/hero.js`, its pixels in `pup.js`, `cat.js`, `corgi.js`, `monkey.js` |
 | the settings page | `options.html`, `options.js` |
 | the PDF reader | `pdf-view.js` (opening, rendering), `lib/pdf-layout.js` (lines and paragraphs), `pdfRow` in `compose-page.js` |
 

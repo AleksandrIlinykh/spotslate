@@ -415,7 +415,7 @@ test('the settings come in blocks, each with its title', async ({ page, extensio
 test('the companions move in their block, Spot chosen; a hovered one dances, and the one picked is saved', async ({ page, extensionId, serviceWorker }) => {
   await page.goto(optionsUrl(extensionId));
   const tiles = page.locator('.companion');
-  await expect(tiles).toHaveText([/Spot/, /Ink/, /Biscuit/, /Momo/, /No one/]);
+  await expect(tiles).toHaveText([/Spot/, /Ink/, /Biscuit/, /Momo/, /Bobo/, /No one/]);
   await expect(page.getByRole('radio', { name: 'Spot' })).toBeChecked();
   const ink = tiles.filter({ hasText: 'Ink' }).locator('.companion-picture');
   await expect(ink).toHaveAttribute('data-hero', 'Ink');
@@ -436,6 +436,7 @@ test('the companions move in their block, Spot chosen; a hovered one dances, and
   await page.getByRole('radio', { name: 'Ink' }).focus();
   await page.keyboard.press('ArrowRight'); // Biscuit
   await page.keyboard.press('ArrowRight'); // Momo
+  await page.keyboard.press('ArrowRight'); // Bobo
   await page.keyboard.press('ArrowRight'); // No one
   await expect(page.getByRole('radio', { name: 'No one' })).toBeChecked();
   await save(page);

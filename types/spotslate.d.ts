@@ -21,7 +21,7 @@ declare namespace SpotSlate {
   /** Who translates: an AI provider called by background, or Chrome's translator on the page itself. */
   type Engine = 'api' | 'browser';
   /** A companion in the settings: a key of `heroes`, or none. */
-  type Companion = 'pup' | 'cat' | 'corgi' | 'monkey' | 'none';
+  type Companion = 'pup' | 'cat' | 'corgi' | 'monkey' | 'chimp' | 'none';
 
   /** A shortcut by its modifiers and its physical key (KeyA..KeyZ, Digit0..Digit9), so it works in any layout. */
   interface Shortcut {
@@ -526,6 +526,7 @@ interface SpotSlate {
 
   /** content/popup.js: a learning answer cut at its first "---" line into the translation and the breakdown. */
   splitLesson(text: string): { head: string; rest: string };
+  splitBold(text: string): { text: string; bold?: boolean }[];
 
   /** content/selection.js: the user's selection under a point, on the page or in the focused field. */
   selectionAt(x: number, y: number): SpotSlate.Picked | null;

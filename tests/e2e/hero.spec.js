@@ -176,6 +176,16 @@ test('now and then, resting, the monkey grabs its head, then rests again', async
   await expect(hero(page)).toHaveAttribute('data-play', 'idle', { timeout: 15_000 });
 });
 
+test('the worried monkey companion holds its head by the mouse', async ({ page, server, setSettings }) => {
+  await setSettings({ companion: 'chimp' });
+  await page.goto(`${server.url}/page.html`);
+  await page.mouse.move(60, 150);
+  await page.keyboard.down('Alt');
+  await expect(hero(page)).toHaveAttribute('data-hero', 'Bobo');
+  await expect(hero(page)).toHaveAttribute('data-play', 'dance');
+  await expect.poll(() => heroBox(page)).toEqual({ x: 72, y: 166, width: 32, height: 32 });
+});
+
 test('with reduced motion the cat keeps still, without its fidgets', async ({ page, server, setSettings }) => {
   test.slow();
   await page.emulateMedia({ reducedMotion: 'reduce' });
