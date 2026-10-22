@@ -8,13 +8,17 @@ import '../../extension/content/strings.js';
 
 export const EXTENSION_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../extension');
 
-// The extension keeps its shadow roots closed, so pages cannot read or press anything in them; tests reach inside
-// through a copy whose content/config.js opens them. security.spec.js checks that the real one keeps them closed.
+// The extension keeps its shadow roots closed, so pages cannot read or press anything in them, and runs the dual
+// subtitles on YouTube alone; tests reach inside, and test the subtitles on the mock server, through a copy whose
+// content/config.js opens the roots and allows 127.0.0.1. security.spec.js checks that the real one does neither.
 const TEST_EXTENSION_PATH = path.join(os.tmpdir(), `spotslate-e2e-${process.pid}`);
 fs.rmSync(TEST_EXTENSION_PATH, { recursive: true, force: true });
 fs.cpSync(EXTENSION_PATH, TEST_EXTENSION_PATH, { recursive: true });
 const config = path.join(TEST_EXTENSION_PATH, 'content/config.js');
-fs.writeFileSync(config, fs.readFileSync(config, 'utf8').replace("SHADOW_MODE: 'closed'", "SHADOW_MODE: 'open'"));
+fs.writeFileSync(
+  config,
+  fs.readFileSync(config, 'utf8').replace("SHADOW_MODE: 'closed'", "SHADOW_MODE: 'open'").replace('CAPTION_HOSTS: [', "CAPTION_HOSTS: ['127.0.0.1', "),
+);
 
 export const test = base.extend({
   extensionPath: [TEST_EXTENSION_PATH, { option: true }],

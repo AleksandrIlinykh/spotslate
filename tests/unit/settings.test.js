@@ -22,7 +22,7 @@ test('withDefaults returns the free built-in translator, the browser language, n
 });
 
 test('withDefaults keeps the companion chosen, or none, and brings Spot back for anything else', () => {
-  for (const companion of ['pup', 'cat', 'corgi', 'none']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, companion);
+  for (const companion of ['pup', 'cat', 'corgi', 'monkey', 'chimp', 'none']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, companion);
   for (const companion of ['dragon', '', 7, null, ' cat']) assert.equal(withDefaults({ companion }, 'win', 'en').companion, 'pup');
 });
 

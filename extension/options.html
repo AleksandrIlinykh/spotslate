@@ -83,7 +83,7 @@
     @media (prefers-color-scheme: dark) { #modelList li[aria-selected="true"] { background: #8ab4f8; color: #202124; } }
     #writeKey, #vocabularyKey { cursor: pointer; caret-color: transparent; }
     #status.error, #keysProblem { color: var(--error); }
-    .companions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .companions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
     @media (max-width: 480px) { .companions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .companion {
       position: relative; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 14px 6px 10px;
@@ -192,6 +192,7 @@
         <label class="companion"><input type="radio" name="companion" value="cat"><span class="companion-picture"></span><span class="companion-name">Ink</span><span class="companion-kind">Black cat, washes</span></label>
         <label class="companion"><input type="radio" name="companion" value="corgi"><span class="companion-picture"></span><span class="companion-name">Biscuit</span><span class="companion-kind">Corgi, wiggles</span></label>
         <label class="companion"><input type="radio" name="companion" value="monkey"><span class="companion-picture"></span><span class="companion-name">Momo</span><span class="companion-kind">Monkey, jumps</span></label>
+        <label class="companion"><input type="radio" name="companion" value="chimp"><span class="companion-picture"></span><span class="companion-name">Bobo</span><span class="companion-kind">Monkey, worries</span></label>
         <label class="companion"><input type="radio" name="companion" value="none"><span class="companion-picture"><span class="no-companion"></span></span><span class="companion-name">No one</span><span class="companion-kind">Only the translation</span></label>
       </div>
     </section>

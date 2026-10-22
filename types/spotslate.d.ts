@@ -30,7 +30,7 @@ declare namespace SpotSlate {
   /** Who translates: an AI provider called by background, or Chrome's translator on the page itself. */
   type Engine = 'api' | 'browser';
   /** A companion in the settings: a key of `heroes`, or none. */
-  type Companion = 'pup' | 'cat' | 'corgi' | 'monkey' | 'none';
+  type Companion = 'pup' | 'cat' | 'corgi' | 'monkey' | 'chimp' | 'none';
 
   /** A shortcut by its modifiers and its physical key (KeyA..KeyZ, Digit0..Digit9), so it works in any layout. */
   interface Shortcut {
@@ -515,6 +515,8 @@ declare namespace SpotSlate {
 interface SpotSlate {
   /** content/config.js: 'closed' in the extension; the e2e tests run a copy with 'open'. */
   SHADOW_MODE: ShadowRootMode;
+  /** content/config.js: the hosts the dual subtitles run on (YouTube); the e2e tests' copy adds 127.0.0.1. */
+  CAPTION_HOSTS: string[];
 
   /** content/strings.js: what SpotSlate says, per language and key. */
   STRINGS: Record<SpotSlate.Lang, Record<string, string>>;
