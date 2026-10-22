@@ -522,6 +522,7 @@ interface SpotSlate {
 
   /** content/popup.js: a learning answer cut at its first "---" line into the translation and the breakdown. */
   splitLesson(text: string): { head: string; rest: string };
+  splitBold(text: string): { text: string; bold?: boolean }[];
 
   /** content/selection.js: the user's selection under a point, on the page or in the focused field. */
   selectionAt(x: number, y: number): SpotSlate.Picked | null;

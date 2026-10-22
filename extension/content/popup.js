@@ -73,6 +73,7 @@
     .head.is-word { font-size: 22px; font-weight: 700; line-height: 1.25; }
     .rest { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8dee4; font-size: 13px; opacity: 0.85; }
     .rest[hidden] { display: none; }
+    .rest strong { font-weight: 700; }
     .popup.is-loading .text { animation: pulse 1s ease-in-out infinite; }
     .popup.is-error .text { color: #cf222e; }
     .popup.is-notice .text { opacity: 0.75; }
@@ -141,6 +142,35 @@
     const separator = /^[ \t]*-{3,}[ \t]*$/m.exec(text);
     if (!separator) return { head: text.replace(/\s*(?:^|\n)-{1,2}$/, '').trimEnd(), rest: '' };
     return { head: text.slice(0, separator.index).trimEnd(), rest: text.slice(separator.index + separator[0].length).trim() };
+  }
+
+  // The model marks words with **bold** even in a plain text answer. Cuts the text into the runs between the pairs of
+  // asterisks, the pairs' contents flagged bold; an unclosed pair (still streaming) stays as typed.
+  /** @type {SpotSlate['splitBold']} */
+  function splitBold(text) {
+    const runs = [];
+    let from = 0;
+    for (const match of text.matchAll(/\*\*(?=\S)(.+?)(?<=\S)\*\*/g)) {
+      if (match.index > from) runs.push({ text: text.slice(from, match.index) });
+      runs.push({ text: match[1], bold: true });
+      from = match.index + match[0].length;
+    }
+    if (from < text.length) runs.push({ text: text.slice(from) });
+    return runs;
+  }
+
+  const withoutBold = (text) => splitBold(text).map((run) => run.text).join('');
+
+  // Fills `element` with `text`, the **bold** runs in <strong>. Nodes, never markup: the text comes from the page's model.
+  function setRich(element, text) {
+    element.replaceChildren(
+      ...splitBold(text).map((run) => {
+        if (!run.bold) return document.createTextNode(run.text);
+        const strong = document.createElement('strong');
+        strong.textContent = run.text;
+        return strong;
+      }),
+    );
   }
 
   // The six dots that say "drag me", for the title rows of the windows that can be moved (dimmed by `.grip` rules).
@@ -289,11 +319,12 @@
       if (lesson) {
         const { head, rest } = splitLesson(text);
         headEl.className = `head is-${lesson}`;
-        headEl.textContent = head;
-        restEl.textContent = rest;
+        const plainHead = withoutBold(head); // the head is bold as a whole
+        headEl.textContent = plainHead;
+        setRich(restEl, rest);
         restEl.hidden = rest === '';
         textEl.replaceChildren(headEl, restEl);
-        copyable = head;
+        copyable = plainHead;
       } else {
         textEl.textContent = text;
       }
@@ -555,5 +586,5 @@
     };
   }
 
-  Object.assign((globalThis.spotslate ??= {}), { createPopup, createGrip, splitLesson });
+  Object.assign((globalThis.spotslate ??= {}), { createPopup, createGrip, splitLesson, splitBold });
 })();
