@@ -13,7 +13,7 @@ What it does:
 - **Read**: the translation of a paragraph, a selection or a few words (a short dictionary entry) appears right by the text, which stays outlined and joined to the popup by a dashed line.
 - **Vocabulary**: select a word and press Alt+A to save it, by language. See and copy your words from the toolbar window.
 - **Subtitles on YouTube**: turn on YouTube's own captions and SpotSlate adds a translated line above each one, a little smaller and tinted; with an AI provider it keeps to the video's own subject and terms.
-- **PDF reader**: open a local PDF in SpotSlate's own reader from the toolbar window, and translate its paragraphs where you read them.
+- **PDF reader**: Chrome's own PDF viewer gives extensions no text, so SpotSlate has a reader of its own. On a tab showing a PDF, the toolbar window offers "Read this PDF in SpotSlate"; or open a file from your computer, or drop it on the reader. Hold Alt over a paragraph to translate it, the columns of a paper kept apart and words split at a line end made whole. Long PDFs open at once: pages draw as you scroll to them.
 - **Write**: a window by any text field turns what you write in your language into the page's language, to copy and paste.
 - **Practise**: with the same language on both sides, the window corrects your own text instead and explains each mistake.
 - **Learn the site**: with an AI provider, each site gets a short context of its subject and terms, so they come out the same way every time.
@@ -107,7 +107,7 @@ Turn on YouTube's own captions (the CC button) and SpotSlate adds their translat
 
 Reading in a language you are learning, select a word and press Alt+A (or the shortcut you set under "Keys"): SpotSlate saves it, and a small note confirms. No translation is stored, just the word, filed under its language (the one detected, or the page's), so each language you read keeps its own list. The same word is not saved twice.
 
-Open the SpotSlate icon on the toolbar to see your words at the bottom of the window: a tab for each language, newest first. Remove any with the "×" next to it. "Copy" puts the chosen language's words on the clipboard, one per line, to paste wherever you keep them (a notes file, or Anki). The list keeps growing until you remove words; it stays on your computer and is never sent anywhere.
+Open the SpotSlate icon on the toolbar to see your words at the bottom of the window: a tab for each language, newest first. Click the "Vocabulary" header to collapse or expand the list (it is remembered). Remove a single word with the "×" next to it, or "Clear" the whole current language (it asks first). "Copy" puts the chosen language's words on the clipboard as a list, one per line, to paste wherever you keep them (a notes file, or Anki). The list keeps growing until you clear it; it stays on your computer and is never sent anywhere.
 
 ## On a site of your own
 

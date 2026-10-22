@@ -26,7 +26,7 @@ What to fill in when submitting SpotSlate. The package is `dist/spotslate-<versi
 > - Copy the translation, pin the popup, drag it aside to read a long text in parallel.
 > - Switch the language to translate into right in the popup's title bar.
 > - On YouTube, turn on the captions to get a line with their translation under each one.
-> - Open a local PDF in SpotSlate's reader and hold Alt over its paragraphs the same way.
+> - Read PDFs in SpotSlate's own reader (from the toolbar on a PDF tab, or a file from your computer) and hold Alt over their paragraphs the same way, columns kept apart.
 >
 > WRITE
 > - Alt+click a text field, or press Alt+T while typing: write in your own language and get the text in the page's language, to copy.
@@ -76,7 +76,7 @@ The icon comes from the package (`icons/icon-128.png`).
 - `activeTab`: when the user opens the compose window from the toolbar, it tells which site the active tab is on, so the window can use that site's context.
 - `declarativeNetRequestWithHostAccess`: sets a local `Origin` header on SpotSlate's own requests to `localhost` and `127.0.0.1`, so that local AI servers such as Ollama accept them. No other requests are touched.
 - Host permissions (the APIs of DeepSeek, OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Mistral, xAI and Alibaba Qwen, and `localhost`): to send the text the user asks to translate to the provider the user chose, with the user's key.
-- Optional host permissions (`https://*/*`, `http://*/*`): asked for at runtime only for an API URL the user types in, and only that host.
+- Optional host permissions (`https://*/*`, `http://*/*`): asked for at runtime, one host at a time, only for an API URL the user types in, or for the site of a PDF the user opens in SpotSlate's PDF reader from its tab (the reader downloads that PDF again, without cookies, because Chrome's PDF viewer gives extensions no text).
 - Content scripts on all sites: the script has to be on the page before the user holds Alt, to outline the paragraph under the mouse and show the translation there. Until Alt is held it only follows the mouse and listens for the key. With Chrome's translator, on the first click it also reads the page's declared language, or the start of its text, on the computer, to get the right translation model ready; nothing of it leaves the computer.
 
 **Remote code:** No. All code is in the package.

@@ -35,7 +35,7 @@
     // A page can mark the block to translate (the PDF reader groups a paragraph's lines under one such element).
     const marked = node.closest('[data-spotslate-block]');
     if (marked instanceof HTMLElement) {
-      const text = blockText(marked);
+      const text = markedText(marked);
       if (LETTER.test(text)) return text.length > MAX_CHARS ? { target: marked, reason: 'too-long' } : { target: marked, text };
     }
     for (; node && node !== document.body && node !== document.documentElement; node = parentOf(node)) {
@@ -84,6 +84,14 @@
 
   function blockText(block) {
     return block.innerText.trim().replace(/\n{3,}/g, '\n\n');
+  }
+
+  // A marked block's text. On SpotSlate's own pages the block may carry it cleaned up (the PDF reader's paragraph:
+  // its lines joined, a word split at a line end made whole); on a web page the attribute is ignored, so the page
+  // cannot swap in text of its own.
+  function markedText(block) {
+    const own = location.protocol === 'chrome-extension:' ? block.dataset.spotslateText?.trim() : '';
+    return own || blockText(block);
   }
 
   Object.assign((globalThis.spotslate ??= {}), { elementAt, inspectBlock, isOverText, isTextField, writableField });

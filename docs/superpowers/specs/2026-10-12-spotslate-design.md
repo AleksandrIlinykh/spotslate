@@ -51,6 +51,8 @@ spotslate/
       sites.js          DEFAULT_SITE_MODE, siteModeOf(sites, site), withSiteMode(sites, site, mode): the mode of each site
       settings.js       DEFAULTS, LANGUAGES, COMPANIONS, withDefaults(stored, platform), activeProvider(settings), loadSettings()
       keys.js           DEFAULT_KEYS, READ_KEYS, shortcutProblem(shortcut, platform), checkedKeys(), formatShortcut(), readKeyName(), shortcutFromEvent(), currentPlatform()
+      vocabulary.js     MAX_WORDS, addWord(), removeWord(), clearLanguage(), vocabularyLanguages(): the words saved with Alt+A
+      pdf-layout.js     paragraphsOf(runs): a PDF page's text runs as paragraphs, for the PDF reader
     content/            classic scripts (not modules) sharing globalThis.spotslate
       config.js         SHADOW_MODE: 'closed' (the e2e tests run a copy with 'open')
       strings.js        STRINGS, t(lang, key, params), languageName(code, ui): what SpotSlate says, in 13 languages
@@ -78,6 +80,9 @@ spotslate/
     compose-page.js
     welcome.html        the page opened on install, with the content scripts loaded so the gestures work on it
     welcome.js
+    pdf.html            SpotSlate's PDF reader, with the content scripts loaded
+    pdf-view.js         opening a PDF (a file, a drop, ?src=), rendering pages near the view, grouping paragraphs
+    vendor/pdfjs/       pdf.js (Apache-2.0): pdf.min.mjs and its module worker
     options.html
     options.js
     icons/              icon-16/32/48/128.png: the pup, drawn by tools/icons.mjs
@@ -94,7 +99,7 @@ spotslate/
   tests/
     unit/               node --test
     e2e/                Playwright
-    mock-server.js      mock OpenAI-compatible and Anthropic APIs + test pages
+    mock-server.js      mock OpenAI-compatible and Anthropic APIs + test pages and PDFs
     fixtures/           page.html, hostile.html, shadow.html, scroller.html, long.html
   types/
     spotslate.d.ts      the types of the shared content script object, the messages, the ports and the storage
@@ -447,7 +452,7 @@ Three ways in, one window (`createComposer` in `content/composer.js`):
 
 - **Alt+click on a field** (on a Mac with Ctrl as the read key, Ctrl+click, which macOS turns into a context-menu click: SpotSlate takes it on a field and keeps the menu away) where one writes prose (`writableField`): a textarea, an `input` of type text or search, or a rich text editor (the whole `contenteditable` editing host around the click). Never a disabled or read-only field, a password field, or one whose `autocomplete` asks for a password, a one-time code or card details (`cc-*`). Holding Alt over such a field shows the hint "Alt+click: write in {language}." instead of "Input fields are not translated.". Paragraphs inside editors still translate on Alt + hover; Alt+click in an editor opens the window. The window (`content/compose-window.js`) opens below the field, or above it when there is more room there, 440 px wide, and can be moved by its title row. Keys typed in it stop at its host, so the page's own shortcuts (GitHub, Jira, Slack) do not fire. Pages that keep focus for themselves (Jira and Confluence trap it to a modal, or refocus their editor whenever it loses focus) must not pull it out of the window's fields: `content/main.js` watches the whole document for focus events in the capture phase, before the page's own handlers, and stops any `focusin` or `focusout` that moves focus into or out of the popup or the window (the focus still moves; only the page's listeners are spared). The window's host also stops the focus events it fires. Copy and close give the focus back to the field.
 - **Alt+T**, with T as the physical key (`event.code === 'KeyT'`), so it works in any keyboard layout: the window opens at the field being typed in (the focused element, looking inside shadow roots), else at the field under the mouse, else 22 px below the tip of the mouse pointer (16 px for the arrow and the 6 px gap), or in the upper middle of the window when the mouse has not been over the page. Alt+T again closes it, as its "×" does. The page hears the Alt but not the T, and since T makes Alt a combination, the paragraph under the mouse is not translated. Copy and close give the focus back to what had it.
-- **The toolbar icon or Ctrl+Shift+Y**: the same window as the toolbar popup (`compose.html`), on any tab, including the new tab page and pages no extension can enter. It asks the active tab's content script for the page's declared language (`{ type: 'compose-context' }`); without a content script there, it works without it. It has a gear for the settings, and (the toolbar popup only) a document button that opens the PDF reader in a new tab; Copy and Esc close it.
+- **The toolbar icon or Ctrl+Shift+Y**: the same window as the toolbar popup (`compose.html`), on any tab, including the new tab page and pages no extension can enter. It asks the active tab's content script for the page's declared language and whether the tab shows a PDF (`{ type: 'compose-context' }`); without a content script there, it works without it. On a tab showing a PDF, a "Read this PDF in SpotSlate" row under the site's switch opens it in the PDF reader (see PDF reader). It has a gear for the settings, and (the toolbar popup only) a document button that opens the PDF reader in a new tab; Copy and Esc close it.
 
 The window:
 
@@ -492,9 +497,23 @@ The languages read on a site: background counts the language of every text trans
 
 Chrome's built-in PDF viewer renders text through PDFium with no DOM, so SpotSlate's gestures cannot reach it. SpotSlate has its own reader instead: `pdf.html`, an extension page that renders a PDF with pdf.js (vendored in `extension/vendor/pdfjs/`, Apache-2.0: `pdf.min.mjs` and the module worker `pdf.worker.min.mjs`). Each page becomes a `.page` with a canvas and, over it, pdf.js's selectable text layer (`TextLayer`, positioned `<span>`s). The container carries `--total-scale-factor` (the render scale) and pdf.js's own text-layer CSS, which size and place the transparent spans over the canvas glyphs. The page loads the content scripts in the manifest order, exactly as `welcome.html` does (checked by `tests/unit/manifest.test.js`), so selecting text and holding Alt translates it like on any page; a one-to-three-word selection gets a dictionary entry.
 
-**Paragraphs.** pdf.js makes every line its own absolutely positioned block, which Alt would translate one line at a time. After rendering, `groupParagraphs` (in `pdf-view.js`) groups the line spans into paragraphs by the vertical gap between them and wraps each paragraph's spans in a `data-spotslate-block` element at the paragraph's box (the spans stay absolutely positioned, now relative to the wrapper, so pdf.js's placement is unchanged). `inspectBlock` (content/block.js) prefers the nearest `[data-spotslate-block]` ancestor as the block to translate, so Alt over any line translates the whole paragraph. The attribute is a generic hint any page could use, not PDF-specific.
+**Opening a PDF.** Three ways, all on the user's action:
 
-- **Local files only.** "Open PDF" opens a file picker; the chosen file is read with `file.arrayBuffer()` (`FileReader`), never fetched or uploaded. No host permission, no remote or SharePoint fetch. The reader is reached from the settings page ("Read a PDF" card, a link to `pdf.html` in a new tab) and from the document button in the toolbar popup.
+- **A file**: "Open PDF" opens a file picker, or a PDF is dropped anywhere on the reader (`dragover` and `drop` on the document; whatever is dropped is kept from the browser, which would leave the page). The file is read with `file.arrayBuffer()`, never uploaded.
+- **The PDF a tab shows**: the toolbar popup, on a tab that shows a PDF, has a "Read this PDF in SpotSlate" row (`.pdf-here`, under the site's switch) that opens `pdf.html?src=<the tab's address>` next to the tab. The tab tells it shows one: its content script answers `compose-context` with `pdf: document.contentType === 'application/pdf'` (content scripts run in Chrome's PDF viewer's document, so this works for addresses without `.pdf`, as arXiv serves papers); a `file:` tab, or one with no content script, counts by an address ending in `.pdf`.
+- **An address** (`?src=`): a web address needs SpotSlate's permission on its host (`optional_host_permissions`), checked with `permissions.contains` for `<scheme>://<host>/*`. Without it the reader shows a notice naming the host and an Allow button (`.allow`) that asks `permissions.request` on the click, as Chrome requires a user gesture; once allowed, it opens. pdf.js downloads the PDF again from its address, without cookies (`withCredentials` off), so a PDF behind a sign-in fails; the notice for a failed load says to download it and open the file instead. A `file:` address needs Chrome's "Allow access to file URLs" switch for SpotSlate (`chrome.extension.isAllowedFileSchemeAccess()`); without it the notice says where to turn it on, with a button to the extensions page. Any other address, or a load that fails ("Could not open this PDF: ..."), ends in a notice.
+
+**Pages render near the view.** Opening makes a `.page` place for every page (`data-page`), sized like the first page, so the scrollbar is right at once. An `IntersectionObserver` with a root margin of one and a half screens above and below renders a page as it comes near (canvas, then text layer, then paragraphs; `data-rendered` once done, its real size set) and drops a page that leaves (its render and text layer cancelled, canvas and text gone, the place kept). A page dropped while rendering stops at the next step (a per-page token). A newer document replaces one still loading. The browser's own find (Ctrl+F) only sees the pages rendered.
+
+**Paragraphs (lib/pdf-layout.js).** pdf.js makes every run of text its own absolutely positioned span, which Alt would translate a piece at a time. After a page's text layer renders, `groupParagraphs` (`pdf-view.js`) measures the spans and `paragraphsOf(runs)` groups them:
+
+- **Lines**: runs on one row (their boxes overlap by half the lower one's height, and neither is 2.5 times taller than the other, so text set sideways in the margin or a drop cap stands apart) join into a line when the gap between them is at most 1.2 line heights, never when over 3. In between, a gap is a loose space of a justified line when text just above or below (within two line heights) runs across it, and the gap between two columns when nothing does. So the columns of a page stay apart, even a narrow IEEE gutter, while a justified line keeps its last word.
+- **Paragraphs**: a line joins the paragraph whose last line is right above it in its column (they overlap across), in about the same font size (within 1.25), no further below than 1.45 times the usual line step (the median over the page, so double spacing counts as usual). A line still starts a new paragraph when it begins with a bullet or a list number, when it sits more than 0.8 line heights further in or out than the line above once the paragraph has two lines (a book's or a paper's indented first line), or when it is indented under a single short line (the end of a paragraph carried over from the column before). A list item's hanging indent comes after its first, full line, so it does not split the item.
+- **Text**: each line's runs left to right, a space where the gap shows one (over 0.15 line heights) and neither run has one; the lines joined by a space, except that a word split by a hyphen at a line end is made whole when the next line starts in lower case (a compound such as "Ost-West" keeps its hyphen, a dash after a space stays), and a soft hyphen always joins.
+
+Each paragraph's spans are wrapped in a `data-spotslate-block` element at the paragraph's box, carrying the paragraph's text in `data-spotslate-text`; the spans stay absolutely positioned, now relative to the wrapper, from their computed place, so pdf.js's placement over the canvas is unchanged. `inspectBlock` (content/block.js) prefers the nearest `[data-spotslate-block]` ancestor as the block to translate, so Alt over any line translates the whole paragraph, and on SpotSlate's own pages (`chrome-extension:`) it takes the block's `data-spotslate-text` when there is one; on a web page that attribute is ignored, so a page cannot swap in text of its own. The block attribute itself is a generic hint any page could use, not PDF-specific. Tables come out as their cells, one block each.
+
+- **Reached** from the settings page ("Read a PDF" card, a link to `pdf.html` in a new tab), from the document button in the toolbar popup (an empty reader), and from the popup's "Read this PDF in SpotSlate" row on a PDF tab. No corporate or SharePoint integration: a PDF behind a sign-in is downloaded and opened as a file.
 - The vendored worker is a module worker loaded from a packaged file; pdf.js's optional WASM needs `'wasm-unsafe-eval'`, which Chrome's MV3 `extension_pages` CSP already allows. Inline scripts are blocked by that CSP, so `pdf.html` loads `pdf-view.js` as an external module. pdf.js is excluded from the type check (`jsconfig.json`), and its files carry `// @ts-nocheck`.
 - The package grows by about 1.7 MB (pdf.js).
 
@@ -520,7 +539,7 @@ Words the user saves while reading, to learn later. Select a word (on a page, or
 - The word's language comes from the detector run on the sentence or paragraph the word is in (`selectionBlockText`; a lone word is too short to tell apart reliably), else the page's declared language (`document.documentElement.lang`), else the detector's best guess, and finally `und`. It is never dropped for want of a language (that silent drop once made the gesture seem to do nothing on a page without a `lang`). So each language a person reads gets its own list.
 - The word goes to background in an `add-word` message. Background (which alone may read storage) keeps the vocabulary in `chrome.storage.local` under `vocabulary`, as `{ [lang]: [{ word, date }] }`, newest first, deduped, capped at `MAX_WORDS` per language (`lib/vocabulary.js`, `addWord`/`removeWord`/`vocabularyLanguages`). Only a plausible language code is accepted and a word is cut to 80 characters. It survives the browser closing.
 - On a save, `background` answers `{ added, word, lang }`; `main.js` shows a toast (`content/toast.js`, a plain element at the bottom of the page, not a shadow root since it shows only a public word) with `wordAdded` in the user's language, and the companion tosses the word: a little pill (`toast.toss`) flies up and away from where the companion is (`#spotslate-hero`, on screen while Alt is held), or from the selection, into the vocabulary. The toss is skipped with reduced motion; the toast still confirms. A duplicate answers `{ added: false }` and shows nothing.
-- The toolbar popup (`compose-page.js`) shows the vocabulary at the bottom: a tab per language that has words (its name from `languageName`), the words of the chosen language newest first, each with a remove (`remove-word`, extension pages only), and a Copy button that copies that language's words one per line to the clipboard (`copied` for a moment). Empty, it shows `vocabularyEmpty`.
+- The toolbar popup (`compose-page.js`) shows the vocabulary at the bottom under a header that collapses or expands it (remembered in `localStorage`): a tab per language that has words (its name from `languageName`), the words of the chosen language newest first, each with a remove (`remove-word`, extension pages only), a Copy button that copies that language's words one per line to the clipboard (`copied` for a moment), and a Clear button that empties the current language (`clear-vocabulary`) after a one-click-away confirm (it asks on the first click, clears on a second within a couple of seconds). Empty, it shows `vocabularyEmpty`.
 
 ## Cache
 
@@ -819,9 +838,20 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   187. Selecting a word and pressing Alt+A saves it to the vocabulary under the page's language (`storage.local` `vocabulary`), with no translation, and a toast names the word.
   188. Alt+A on a word already saved does not add it again (no duplicate).
   189. The toolbar popup shows the vocabulary by language; Copy copies the chosen language's words one per line, and a word can be removed.
+  190. On a two-column PDF page (each row holding a line of both columns), Alt over the left column translates the left column's lines, none of the right column's.
+  191. A word split by a hyphen at a line end in the PDF reaches the translation whole ("Verbin-" and "dung" as "Verbindung").
+  192. A long PDF (40 pages) has a place for every page but renders only those near the view; scrolled to the last page, it renders, and the first page, far behind, is dropped (no canvas).
+  193. A PDF dropped on the reader opens (its name shows, its text is there).
+  194. The reader opens the PDF at a `?src=` address on a host SpotSlate may read, with no prompt.
+  195. On a host SpotSlate may not read yet, the reader shows a notice naming the host and no pages; Allow asks for `<scheme>://<host>/*` and, granted, opens the PDF.
+  196. A `file:` address opens when SpotSlate may read files.
+  197. A `file:` address without file access shows the notice on "Allow access to file URLs".
+  198. A `?src=` address that is not a PDF ends in the "Could not open this PDF" notice.
+  199. On a tab showing a PDF (at an address without `.pdf`), the toolbar popup shows "Read this PDF in SpotSlate", and it opens the reader with the tab's address in `?src=`, the PDF rendered.
+  200. On a page that is not a PDF, the toolbar popup has no "Read this PDF" row.
   182. On a video page (with an AI provider), the subtitle context is distilled from the video's metadata (a non-streamed `video-context` build carrying the title and `<video>` block) and kept by video id; a later caption then carries that context as the `notes` of its translation request.
-  190. The worried monkey companion (Bobo) holds its head by the mouse instead of jumping.
-  191. In learning mode a word's translation is larger and bolder than its breakdown, and Copy takes the translation alone.
-  192. A plain translation is one block with no lesson layout.
+  201. In learning mode a word's translation is larger and bolder than its breakdown, and Copy takes the translation alone.
+  202. A plain translation is one block with no lesson layout.
+  203. The worried monkey companion (Bobo) holds its head by the mouse instead of jumping.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

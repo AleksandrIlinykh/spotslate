@@ -800,8 +800,9 @@
 
   chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Broadcast} */ message, sender, sendResponse) => {
     if (message?.type === 'compose-context') {
-      // The toolbar popup asks for the page's declared language.
-      sendResponse({ pageLang: languageCode(document.documentElement.lang) });
+      // The toolbar popup asks for the page's declared language, and whether the tab shows a PDF (in Chrome's viewer,
+      // whatever its address) to offer SpotSlate's reader.
+      sendResponse({ pageLang: languageCode(document.documentElement.lang), pdf: document.contentType === 'application/pdf' });
       return;
     }
     if (message?.type === 'site-mode-changed') {

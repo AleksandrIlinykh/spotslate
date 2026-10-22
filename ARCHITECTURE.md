@@ -10,7 +10,7 @@ The shapes of the data, every message and the storage layout are typed in [types
 |---|---|---|---|
 | Page | `extension/content/*.js`, classic scripts on every page, top frame only | the page's DOM, never its scripts or the API keys | messages and ports to background |
 | Background | `extension/background.js` with the modules in `extension/lib/` | the settings with the keys, the site contexts, the cache | messages to tabs and pages, `fetch` to the AI provider |
-| Extension pages | `options.html` (settings), `compose.html` (toolbar window), `welcome.html` (on install) | the settings, through the same `lib/` modules | messages and ports to background |
+| Extension pages | `options.html` (settings), `compose.html` (toolbar window), `welcome.html` (on install), `pdf.html` (the PDF reader) | the settings, through the same `lib/` modules; the reader, a PDF the user opens | messages and ports to background |
 | Storage | `chrome.storage.local` and `chrome.storage.session` | | |
 
 ```mermaid
@@ -133,7 +133,11 @@ Alt+T, or Alt+click on a field, opens the compose window:
 4. A correction comes back as `<corrected>` and `<notes>`; `parseCorrection` and `diffWords` show what changed.
 5. The draft and the languages chosen go to background as they change (`compose-draft`, `compose-source`, `compose-target`), so the next window on the site starts from them.
 
-The toolbar window (`compose.html`, `compose-page.js`) is the same composer on its own page. It first asks the active tab for its declared language (`compose-context`), then opens the same way, naming the tab's site.
+The toolbar window (`compose.html`, `compose-page.js`) is the same composer on its own page. It first asks the active tab for its declared language and whether it shows a PDF (`compose-context`), then opens the same way, naming the tab's site. On a PDF tab it adds a row that opens the PDF in the reader.
+
+## Flow: the PDF reader
+
+Chrome's PDF viewer has no DOM text, so `pdf.html` renders a PDF with pdf.js (`vendor/pdfjs/`) and loads the content scripts, which then work on it as on any page. `pdf-view.js` opens a picked or dropped file, or the address in `?src=` (from the toolbar window's row; a web address once SpotSlate may read its host, asked with `permissions.request` on a click). Each page draws as it comes near the view (an `IntersectionObserver`) and is dropped once far away. After a page's text layer renders, `paragraphsOf` (`lib/pdf-layout.js`) groups pdf.js's text runs into lines and paragraphs, keeping columns apart, and each paragraph is wrapped in a `data-spotslate-block` element with its text, hyphenated words made whole, in `data-spotslate-text`; `inspectBlock` in `content/block.js` translates that block on Alt.
 
 ## Flow: settings changed
 
@@ -170,7 +174,7 @@ From background or the toolbar window, with `chrome.tabs.sendMessage` or to exte
 | `settings-changed` | every tab | new `PageSettings` |
 | `site-mode-changed` | the site's tabs, extension pages | a site's new mode |
 | `notes-changed` | the site's tabs, extension pages | the site context, or that it is being rewritten |
-| `compose-context` | the active tab, from the toolbar window | answered with `{ pageLang }` |
+| `compose-context` | the active tab, from the toolbar window | answered with `{ pageLang, pdf }` (`pdf`: the tab shows a PDF) |
 
 Ports, with `chrome.runtime.connect`, answered with `chunk`, then `done` or `error`:
 
@@ -212,6 +216,7 @@ Closing a port cancels the request: background aborts the `fetch`.
 | a site's mode | `lib/sites.js`, `setSiteMode` in `background.js`, `siteRow` in `compose-page.js` |
 | the companion | `content/hero.js`, its pixels in `pup.js`, `cat.js`, `corgi.js`, `monkey.js` |
 | the settings page | `options.html`, `options.js` |
+| the PDF reader | `pdf-view.js` (opening, rendering), `lib/pdf-layout.js` (lines and paragraphs), `pdfRow` in `compose-page.js` |
 
 ## Reading order
 

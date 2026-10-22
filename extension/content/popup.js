@@ -501,7 +501,8 @@
         // appended to the document, would be hidden. When the block is inside the fullscreen element, show the host in
         // the top layer (a manual popover), which paints above it; its coordinates are then the viewport's (fixed).
         const fullscreen = document.fullscreenElement;
-        topLayer = Boolean(fullscreen && fullscreen !== document.documentElement && fullscreen.contains(block));
+        const node = block instanceof Range ? block.commonAncestorContainer : block; // a selection is a Range
+        topLayer = Boolean(fullscreen && fullscreen !== document.documentElement && fullscreen.contains(node));
         host.style.setProperty('position', topLayer ? 'fixed' : 'absolute', 'important');
         side = chooseSide(block.getBoundingClientRect());
         popupEl.classList.remove('is-pinned', 'is-dragging');

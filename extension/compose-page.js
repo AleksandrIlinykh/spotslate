@@ -1,5 +1,5 @@
-// The toolbar popup (and its keyboard shortcut): first the switch for the active tab's site, then the compose window
-// on its own, for writing that goes anywhere. The site's context and the language read there come from background,
+// The toolbar popup (and its keyboard shortcut): first the switch for the active tab's site, on a tab showing a PDF a
+// button to read it in SpotSlate's reader, then the compose window on its own, for writing that goes anywhere. The site's context and the language read there come from background,
 // its declared language from the tab. Tests open it as a page with ?tab= naming the tab it is for.
 
 function siteOf(url) {
@@ -8,6 +8,15 @@ function siteOf(url) {
     return protocol === 'http:' || protocol === 'https:' ? host : null;
   } catch {
     return null;
+  }
+}
+
+function pathOf(url) {
+  try {
+    const { protocol, pathname } = new URL(url);
+    return ['http:', 'https:', 'file:'].includes(protocol) ? pathname : '';
+  } catch {
+    return '';
   }
 }
 
@@ -73,7 +82,23 @@ function siteRow() {
   return row;
 }
 
-if (site) document.body.prepend(siteRow());
+// On a tab showing a PDF, a button to read it in SpotSlate's reader, next to the tab: Chrome's viewer gives SpotSlate
+// no text. The tab says when it shows one (its content script); a file, or a tab with no content script, by its address.
+function pdfRow() {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'pdf-here';
+  row.textContent = t(state.from, 'readThisPdf');
+  row.addEventListener('click', async () => {
+    const url = chrome.runtime.getURL(`pdf.html?src=${encodeURIComponent(tab.url)}`);
+    await chrome.tabs.create({ url, index: tab.index + 1 });
+    window.close();
+  });
+  return row;
+}
+
+const showsPdf = page?.pdf || /\.pdf$/i.test(pathOf(tab?.url));
+document.body.prepend(...[site && siteRow(), showsPdf && pdfRow()].filter(Boolean));
 
 globalThis.spotslate
   .createComposer({
@@ -94,41 +119,88 @@ globalThis.spotslate
   })
   .focus();
 
-// The vocabulary at the bottom: the words saved with Alt+A, a tab per language, newest first, each removable, and a
-// Copy button that copies the current language's words one per line (no translation is kept).
+// The vocabulary at the bottom: the words saved with Alt+A. A header that collapses or expands the list (remembered),
+// a tab per language, the words newest first and each removable, a Copy button (the current language's words one per
+// line, no translation), and a Clear button (the current language, with a one-click-away confirm).
 async function vocabularyPanel() {
   const say = (key, params) => t(state.from, key, params);
+  const COLLAPSED_KEY = 'spotslate-vocab-collapsed';
   const section = document.createElement('section');
   section.className = 'vocab';
-  const head = document.createElement('div');
-  head.className = 'vocab-head';
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'vocab-toggle';
+  const chevron = document.createElement('span');
+  chevron.className = 'vocab-chevron';
   const title = document.createElement('span');
   title.className = 'vocab-title';
   title.textContent = say('vocabulary');
+  toggle.append(chevron, title);
+
+  const body = document.createElement('div');
+  body.className = 'vocab-body';
+  const actions = document.createElement('div');
+  actions.className = 'vocab-actions';
   const tabs = document.createElement('div');
   tabs.className = 'vocab-langs';
   const copy = document.createElement('button');
   copy.type = 'button';
   copy.className = 'vocab-copy';
   copy.textContent = say('copy');
-  head.append(title, tabs, copy);
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'vocab-clear';
+  clear.textContent = say('vocabularyClear');
+  actions.append(tabs, copy, clear);
   const list = document.createElement('ul');
   list.className = 'vocab-list';
   const empty = document.createElement('p');
   empty.className = 'vocab-empty';
   empty.textContent = say('vocabularyEmpty');
-  section.append(head, list, empty);
+  body.append(actions, list, empty);
+  section.append(toggle, body);
+
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    // no localStorage (a private window): start expanded
+  }
+  function applyCollapsed() {
+    section.classList.toggle('collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+  }
+  toggle.addEventListener('click', () => {
+    collapsed = !collapsed;
+    try {
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch {
+      // nothing to persist to; the toggle still works for this opening
+    }
+    applyCollapsed();
+  });
 
   let data = (await chrome.runtime.sendMessage({ type: 'vocabulary' }).catch(() => ({}))) ?? {};
   let current = '';
+  let confirmingClear = false;
+  let confirmTimer = 0;
   const languages = () => Object.keys(data).filter((lang) => data[lang]?.length);
+
+  function resetClear() {
+    confirmingClear = false;
+    clearTimeout(confirmTimer);
+    clear.textContent = say('vocabularyClear');
+    clear.classList.remove('confirming');
+  }
 
   function render() {
     const langs = languages();
     if (!langs.includes(current)) current = langs[0] ?? '';
     const words = current ? (data[current] ?? []) : [];
     empty.hidden = langs.length > 0;
-    tabs.hidden = copy.hidden = list.hidden = langs.length === 0;
+    actions.hidden = list.hidden = langs.length === 0;
+    resetClear();
     tabs.replaceChildren(
       ...langs.map((lang) => {
         const button = document.createElement('button');
@@ -177,6 +249,24 @@ async function vocabularyPanel() {
     }
   });
 
+  // One click arms Clear (it asks), a second within a couple of seconds clears the current language.
+  clear.addEventListener('click', async () => {
+    if (!current) return;
+    if (!confirmingClear) {
+      confirmingClear = true;
+      clear.textContent = say('vocabularyClearConfirm');
+      clear.classList.add('confirming');
+      confirmTimer = setTimeout(resetClear, 2500);
+      return;
+    }
+    const next = await chrome.runtime.sendMessage({ type: 'clear-vocabulary', lang: current }).catch(() => null);
+    if (next) {
+      data = next;
+      render();
+    }
+  });
+
+  applyCollapsed();
   render();
   return section;
 }
