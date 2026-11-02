@@ -50,7 +50,9 @@
         "content/youtube.js",
         "content/main.js"
       ],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true,
+      "match_origin_as_fallback": true
     },
     {
       "matches": ["https://www.youtube.com/*"],

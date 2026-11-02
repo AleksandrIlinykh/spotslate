@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SpotSlate framed fixture</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    header { height: 60px; padding: 0 16px; }
+    iframe { display: block; width: 100%; height: 700px; border: 0; }
+  </style>
+</head>
+<body>
+  <header><p id="outside">Text of the page around the frame</p></header>
+  <!-- Like a Claude artifact: the whole content in a frame of another site, served by the same mock server. -->
+  <iframe id="frame" allow="translator; language-detector"></iframe>
+  <script>
+    const frame = document.getElementById('frame');
+    frame.src = `${location.protocol}//frame.test:${location.port}/page.html`;
+  </script>
+</body>
+</html>

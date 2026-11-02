@@ -21,7 +21,7 @@ A Chrome extension for reading sites in a foreign language: hold Alt, hover over
 ## Out of scope
 
 - Syncing settings across devices.
-- Translating inside iframes, and translating what is in form fields (`input`, `textarea`, `select`), except what the user selects there. Writing into a field goes through the compose window instead, and the window never puts text into the field: the user copies it.
+- Translating what is in form fields (`input`, `textarea`, `select`), except what the user selects there. Writing into a field goes through the compose window instead, and the window never puts text into the field: the user copies it.
 - Transcription, usage examples, full dictionary articles (short selections get a brief entry only).
 - Translating the whole page.
 - Sending the page title or whole neighbouring paragraphs to the model (only the words around a selected phrase and the site context are sent, see "Context for the model").
@@ -121,7 +121,7 @@ The extension code lives apart from `node_modules` so Chrome does not pick up de
 - Tabs open before an install or an update are left as they are: they need a reload (the README says so, and after an update Alt there says "The extension was updated. Reload the page."). Injecting the content scripts into them (`chrome.scripting.executeScript`) would need host access to every site (`<all_urls>` in `host_permissions`): the content-script matches do not grant it. That would add no install warning, but it would let background send requests to any site, so by choice the permissions stay narrow.
 - `optional_host_permissions: ["https://*/*", "http://*/*"]`: any other API host, asked for when the user saves or tests a URL outside the list.
 - `background: { service_worker: "background.js", type: "module" }`.
-- `content_scripts: [{ matches: ["<all_urls>"], js: ["content/config.js", "content/strings.js", "content/block.js", "content/selection.js", "content/language.js", "content/translator.js", "content/notes-panel.js", "content/lang-picker.js", "content/popup.js", "content/highlight.js", "content/correction.js", "content/composer.js", "content/compose-window.js", "content/pixels.js", "content/pup.js", "content/cat.js", "content/corgi.js", "content/hero.js", "content/main.js"], run_at: "document_end" }]`, top frame only. `document_end` rather than `document_idle`: the script is guaranteed to be in place by the `load` event (the e2e tests need this), and it only registers event listeners, so it does not slow page loading.
+- `content_scripts: [{ matches: ["<all_urls>"], js: ["content/config.js", "content/strings.js", "content/block.js", "content/selection.js", "content/language.js", "content/translator.js", "content/notes-panel.js", "content/lang-picker.js", "content/popup.js", "content/highlight.js", "content/correction.js", "content/composer.js", "content/compose-window.js", "content/pixels.js", "content/pup.js", "content/cat.js", "content/corgi.js", "content/hero.js", "content/main.js"], run_at: "document_end", all_frames: true, match_origin_as_fallback: true }]`. `document_end` rather than `document_idle`: the script is guaranteed to be in place by the `load` event (the e2e tests need this), and it only registers event listeners, so it does not slow page loading. They run in every frame, also `about:blank`, `srcdoc` and `blob:` frames: some pages keep all their content in a frame of another site (a Claude artifact on `claude.ai` is one frame on `claudeusercontent.com`), and those would get nothing from the top frame alone. See "Frames".
 - `options_ui: { page: "options.html", open_in_tab: true }`.
 - `icons` and `action.default_icon`: `icons/icon-{16,32,48,128}.png`.
 - `action: { default_title: "SpotSlate: write in another language", default_popup: "compose.html" }`: the icon opens the compose window. The settings open from its gear and from the "Options" item Chrome adds to the icon's menu.
@@ -250,6 +250,16 @@ State: last mouse coordinates, whether Alt is held, whether another key was pres
 - The timer (`TRIGGER_DELAY_MS = 200`) fires: take the element at the last mouse point and look for a block. If a block is found and it is not the block already shown, translate it.
 
 So when the mouse crosses several paragraphs with Alt held, the one where it stops gets translated.
+
+### Frames
+
+Every frame has SpotSlate of its own, and the popup, the outline, the companion and the compose window open in the frame they are for, inside its box. The keys go to the frame that has the keyboard, which is not always the one with the mouse in it: on a Claude artifact the keyboard stays with `claude.ai` around the frame until the user clicks into it. So:
+
+- A frame knows the mouse is not in it when the element under its last mouse point is an `iframe` or a `frame`, or when a `mouseout` with no `relatedTarget` says the mouse left the document. A frame does not read an `iframe` element itself: what is in it is the frame's own.
+- When Alt goes down (alone) in a frame with the mouse not in it, that frame sends `{ type: 'read-key', state: 'down' }` to background, then `'combo'` for another key while Alt is held and `'up'` when Alt is released or the frame loses the focus. Background sends `{ type: 'read-key', state }` to every frame of the sender's tab, and to that tab only. A frame without the keyboard (`document.hasFocus()` false) with the mouse in it takes `'down'` as its own Alt going down, `'combo'` as a combo, `'up'` as Alt released. Pages cannot send these messages, only SpotSlate's content scripts can, and only after a trusted `keydown`.
+- In a frame (never the top one) without the keyboard, a `mousemove` with Alt held and no other modifier counts as Alt going down: the user pressed Alt on the page around the frame, then moved the mouse in.
+- The site of a frame is the tab's: background takes it from the sender's tab, and a frame compares `site-mode-changed` with the top frame's host (`location.ancestorOrigins`), so a site switched off is off in its frames of other sites too. The toolbar window asks only the top frame for `compose-context` (`frameId: 0`).
+- Chrome's translator works in a frame of another site only when the page allows it (`allow="translator"`, as Claude artifacts do); otherwise the popup shows Chrome's error and the AI providers still work.
 
 ## Highlight
 
@@ -873,5 +883,8 @@ E2E (Playwright, real Chromium with the extension loaded, `channel: 'chromium'`)
   214. In learning mode a breakdown the model wrote as plain text (key `prose`) still shows, with no labels.
   215. With `learningPretty` off the request has no Markdown instruction and the breakdown shows as plain text.
   216. In the settings "Make the answer easy to scan" is checked by default, and the choice is saved and restored.
+  217. A page whose content is a frame of another site (`framed.html`, the frame on `frame.test`, like a Claude artifact): Alt with the keyboard still on the page and the mouse over a paragraph in the frame translates it in a popup in the frame, with no popup or outline on the page; clicked into, the frame translates on its own Alt too.
+  218. Alt held over the page around the frame, then the mouse moved onto a paragraph in the frame, translates it there.
+  219. The site switched off in the toolbar window: a frame of another site in its tab gets nothing either, its own Alt included, and nothing is sent.
 
 Manual check (by you, with your own key): load the unpacked extension, set the key, try it on real sites, and before a release go through "Before sending it out" in `store/beta.md`; make sure releasing Alt after a translation does not focus the Chrome menu. That is browser UI behavior and the e2e tests cannot see it.

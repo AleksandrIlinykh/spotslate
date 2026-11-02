@@ -8,7 +8,7 @@ The shapes of the data, every message and the storage layout are typed in [types
 
 | Context | Files | Reads | Talks through |
 |---|---|---|---|
-| Page | `extension/content/*.js`, classic scripts on every page, top frame only | the page's DOM, never its scripts or the API keys | messages and ports to background |
+| Page | `extension/content/*.js`, classic scripts on every page, in every frame (a frame keeps the tab's site) | the page's DOM, never its scripts or the API keys | messages and ports to background |
 | Background | `extension/background.js` with the modules in `extension/lib/` | the settings with the keys, the site contexts, the cache | messages to tabs and pages, `fetch` to the AI provider |
 | Extension pages | `options.html` (settings), `compose.html` (toolbar window), `welcome.html` (on install), `pdf.html` (the PDF reader) | the settings, through the same `lib/` modules; the reader, a PDF the user opens | messages and ports to background |
 | Storage | `chrome.storage.local` and `chrome.storage.session` | | |
@@ -166,6 +166,7 @@ To background, with `chrome.runtime.sendMessage`:
 | `read-lang` | `main.js`, after Chrome's translator | none; counted for the site |
 | `report` | the popup's Report | none; opens a GitHub issue |
 | `open-options` | the popup's and the composer's gear | none |
+| `read-key` | `main.js` in the frame with the keyboard, when the mouse is in another frame | none; sent on to every frame of that tab |
 | `site-mode` | nothing (see "Loose ends") | the site's mode |
 
 From background or the toolbar window, with `chrome.tabs.sendMessage` or to extension pages:
@@ -175,7 +176,8 @@ From background or the toolbar window, with `chrome.tabs.sendMessage` or to exte
 | `settings-changed` | every tab | new `PageSettings` |
 | `site-mode-changed` | the site's tabs, extension pages | a site's new mode |
 | `notes-changed` | the site's tabs, extension pages | the site context, or that it is being rewritten |
-| `compose-context` | the active tab, from the toolbar window | answered with `{ pageLang, pdf }` (`pdf`: the tab shows a PDF) |
+| `compose-context` | the active tab's top frame, from the toolbar window | answered with `{ pageLang, pdf }` (`pdf`: the tab shows a PDF) |
+| `read-key` | every frame of one tab | Alt `down`, `up` or in a `combo` in the frame with the keyboard; the frame with the mouse reads |
 
 Ports, with `chrome.runtime.connect`, answered with `chunk`, then `done` or `error`:
 
@@ -215,6 +217,7 @@ Closing a port cancels the request: background aborts the `fetch`.
 | what SpotSlate says on pages | `content/strings.js`; `tests/unit/strings.test.js` checks every language has every text |
 | error texts and codes | `lib/errors.js` |
 | the keys | `lib/keys.js`, `isWriteKey` and `readHeld` in `main.js`, the Keys block of `options.html` |
+| frames: the keyboard in one, the mouse in another | `pressReadKey`, `relayReadKey`, `isFrame` and the `read-key` message in `main.js`; `read-key` in `background.js` |
 | a site's mode | `lib/sites.js`, `setSiteMode` in `background.js`, `siteRow` in `compose-page.js` |
 | the companion | `content/hero.js`, its pixels in `pup.js`, `cat.js`, `corgi.js`, `monkey.js` |
 | the settings page | `options.html`, `options.js` |

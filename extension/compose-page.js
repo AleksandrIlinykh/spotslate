@@ -32,7 +32,7 @@ const site = siteOf(tab?.url);
 let page = null;
 if (site) {
   try {
-    page = await chrome.tabs.sendMessage(tab.id, { type: 'compose-context' });
+    page = await chrome.tabs.sendMessage(tab.id, { type: 'compose-context' }, { frameId: 0 }); // the page, not a frame in it
   } catch {
     // no content script there (a page opened before the extension was loaded): no declared language then
   }

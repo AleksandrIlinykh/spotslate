@@ -209,6 +209,11 @@ chrome.runtime.onMessage.addListener((/** @type {SpotSlate.Message} */ message, 
     if (own) clearVocabulary(message.lang).then(sendResponse);
     return Boolean(own);
   }
+  if (message?.type === 'read-key' && ['down', 'up', 'combo'].includes(message.state) && sender.tab?.id !== undefined) {
+    // The frame of a tab with the keyboard tells the tab's frames what the read key does, for the one with the mouse
+    // in it (content/main.js relayReadKey). Only to that same tab, and only the key's state.
+    chrome.tabs.sendMessage(sender.tab.id, { type: 'read-key', state: message.state }).catch(() => {});
+  }
   if (message?.type === 'report') openReport({ mode: message.mode, comment: message.comment });
   if (message?.type === 'read-lang') {
     // A text the page translated by itself, with Chrome's translator: only its language is counted.

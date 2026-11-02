@@ -53,12 +53,25 @@
   const captions = createCaptions();
   const toast = createToast();
 
+  // SpotSlate runs in frames too (a Claude artifact is all one frame of another site). The site is the tab's, as
+  // background names it, also in a frame whose own address is elsewhere.
+  const inFrame = window !== window.top;
+  const tabSite = (() => {
+    const origins = location.ancestorOrigins;
+    try {
+      return origins?.length ? new URL(origins[origins.length - 1]).host : location.host;
+    } catch {
+      return location.host;
+    }
+  })();
+
   let mouseX = null;
   let mouseY = null;
   let readDown = false;
   let combo = false;
   let usedReadKey = false;
   let readDownAt = 0; // when the read key went down (event.timeStamp)
+  let readRelayed = false; // the read key went down with the mouse out of this page: told to the tab's other frames
   let triggerTimer = 0;
   let leaveTimer = 0;
   let previewFrame = 0;
@@ -119,6 +132,7 @@
   function pickUnderMouse() {
     const element = elementAt(mouseX, mouseY);
     if (element && (popup.isOwn(element) || composeWindow.isOwn(element))) return undefined;
+    if (isFrame(element)) return null; // the frame's own SpotSlate reads what is in it
     if (element) markCaptionBlock(element); // on YouTube, make the whole caption one block before picking
     const picked = selectionAt(mouseX, mouseY) ?? (element ? inspectBlock(element) : null);
     // Over a huge block's padding or margins rather than its text there is nothing to point at.
@@ -622,6 +636,30 @@
     readDown = false;
     clearTimeout(triggerTimer);
     highlight.hide();
+    if (readRelayed) relayReadKey('up');
+    readRelayed = false;
+  }
+
+  // The read key went down: in this page, or in another frame of the tab while the mouse is in this one.
+  function pressReadKey(withOthers, at) {
+    readDown = true;
+    readDownAt = at;
+    // Another modifier already held (Ctrl+Alt+…, the Alt+Shift layout switch) is not a translation request.
+    combo = withOthers;
+    usedReadKey = false;
+    if (combo) return;
+    scheduleTrigger();
+    updatePreview();
+    hero?.wake();
+  }
+
+  // The keyboard and the mouse can be in different frames of a tab: on a page whose content is a frame of another
+  // site, the keyboard stays with the page around it until the user clicks in. The frame with the keyboard tells
+  // the tab's frames, through background, what the read key does, and the one with the mouse in it reads.
+  const isFrame = (element) => element instanceof HTMLIFrameElement || element instanceof HTMLFrameElement;
+
+  function relayReadKey(state) {
+    chrome.runtime.sendMessage({ type: 'read-key', state }).catch(() => {});
   }
 
   // Only the user's own input counts: a page could otherwise fake Alt and the mouse to have its text translated
@@ -633,6 +671,9 @@
       mouseX = event.clientX;
       mouseY = event.clientY;
       if (readDown && !readHeld(event)) releaseReadKey(); // keyup happened outside the page
+      else if (!readDown && readHeld(event) && !otherModifiers(event) && !siteMode.off && inFrame && !document.hasFocus()) {
+        pressReadKey(false, event.timeStamp); // a frame entered with the key held in the page around it
+      }
       if (readDown && !combo) {
         scheduleTrigger();
         schedulePreview();
@@ -643,28 +684,34 @@
     { capture: true, passive: true },
   );
 
+  // The mouse left the page, out of the window or into a frame (which does not always say so: see isFrame): it is
+  // nowhere here until it comes back.
+  addEventListener(
+    'mouseout',
+    (event) => {
+      if (!event.isTrusted || event.relatedTarget) return;
+      mouseX = null;
+      mouseY = null;
+    },
+    { capture: true, passive: true },
+  );
+
   addEventListener(
     'keydown',
     (event) => {
       if (!event.isTrusted) return;
       if (event.key === keys.read) {
         if (event.repeat || siteMode.off) return;
-        readDown = true;
-        readDownAt = event.timeStamp;
-        // Another modifier already held (Ctrl+Alt+…, the Alt+Shift layout switch) is not a translation request.
-        combo = otherModifiers(event);
-        usedReadKey = false;
-        if (!combo) {
-          scheduleTrigger();
-          updatePreview();
-          hero?.wake();
-        }
+        pressReadKey(otherModifiers(event), event.timeStamp);
+        readRelayed = !combo && (mouseX === null || isFrame(elementAt(mouseX, mouseY)));
+        if (readRelayed) relayReadKey('down');
         return;
       }
       if (readDown) {
         combo = true; // Alt+Tab, Alt+←, … are not translation requests
         clearTimeout(triggerTimer);
         highlight.hide();
+        if (readRelayed) relayReadKey('combo');
       }
       if (!siteMode.off && isWriteKey(event)) {
         event.preventDefault(); // the page hears neither the T nor the letter it types
@@ -808,8 +855,21 @@
       sendResponse({ pageLang: languageCode(document.documentElement.lang), pdf: document.contentType === 'application/pdf' });
       return;
     }
+    if (message?.type === 'read-key') {
+      // The frame with the keyboard tells what the read key does; the one with the mouse in it reads (relayReadKey).
+      if (message.state === 'down' && !readDown && mouseX !== null && !siteMode.off && !document.hasFocus()) {
+        pressReadKey(false, performance.now());
+      } else if (message.state === 'combo' && readDown && !combo) {
+        combo = true;
+        clearTimeout(triggerTimer);
+        highlight.hide();
+      } else if (message.state === 'up' && readDown && !document.hasFocus()) {
+        releaseReadKey();
+      }
+      return;
+    }
     if (message?.type === 'site-mode-changed') {
-      if (message.site !== location.host) return; // this tab has moved on to another site
+      if (message.site !== tabSite) return; // this tab has moved on to another site
       siteMode = message.siteMode;
       applySettings();
       return;

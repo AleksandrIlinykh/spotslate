@@ -223,7 +223,9 @@ declare namespace SpotSlate {
     /** The draft, kept for the site in chrome.storage.session; '' forgets it. */
     | { type: 'compose-draft'; site?: Site; draft: string }
     /** The language to translate into, chosen in a popup's title bar: the same setting as on the settings page. */
-    | { type: 'set-target-lang'; lang: Lang };
+    | { type: 'set-target-lang'; lang: Lang }
+    /** The read key in the frame with the keyboard while the mouse is out of it; background sends it on to the tab. */
+    | { type: 'read-key'; state: ReadKeyState };
 
   /** From background (or the toolbar window) to pages and extension pages. */
   type Broadcast =
@@ -233,8 +235,13 @@ declare namespace SpotSlate {
     | { type: 'site-mode-changed'; site: Site; siteMode: SiteMode }
     /** To the site's tabs and to extension pages while and after the context is rewritten. */
     | ({ type: 'notes-changed' } & Notes)
-    /** From the toolbar window to the active tab, answered with `{ pageLang, pdf }`: its `<html lang>`, and whether it shows a PDF. */
-    | { type: 'compose-context' };
+    /** From the toolbar window to the active tab's top frame, answered with `{ pageLang, pdf }`: its `<html lang>`, and whether it shows a PDF. */
+    | { type: 'compose-context' }
+    /** From background to the frames of the tab whose frame with the keyboard sent `read-key`; the one with the mouse reads. */
+    | { type: 'read-key'; state: ReadKeyState };
+
+  /** What the read key did: went down alone, came up, or became part of a combination (Alt+T, Alt+Tab). */
+  type ReadKeyState = 'down' | 'up' | 'combo';
 
   /** Port 'translate': content/main.js asks background to translate one text with the AI provider. */
   interface TranslateRequest {
